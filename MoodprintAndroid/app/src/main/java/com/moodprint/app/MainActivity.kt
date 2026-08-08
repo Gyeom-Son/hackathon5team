@@ -70,6 +70,7 @@ fun MoodprintApp(viewModel: MoodprintViewModel = viewModel()) {
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val logs by viewModel.logs.collectAsStateWithLifecycle()
     val pets by viewModel.pets.collectAsStateWithLifecycle()
+    val insight by viewModel.personalizationInsight.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()
     val saveState by viewModel.saveMoodState.collectAsStateWithLifecycle()
     val finishState by viewModel.finishActionState.collectAsStateWithLifecycle()
@@ -127,7 +128,7 @@ fun MoodprintApp(viewModel: MoodprintViewModel = viewModel()) {
                 MoodprintMainScreen(tab, { tab = it }, experience, logs, pets, profile.nickname, viewModel::updateNickname, onCheckIn = { date ->
                     viewModel.beginNewMood(); selectedEmotions = emptyList(); note = ""
                     recordDateMillis = date ?: System.currentTimeMillis(); nav.navigate(Screen.CheckIn.name)
-                })
+                }, insight = insight)
             }
             composable(Screen.CheckIn.name) {
                 CheckInContent(emotions, selectedEmotions, note, energy, { nav.popBackStack() }, { emotion ->

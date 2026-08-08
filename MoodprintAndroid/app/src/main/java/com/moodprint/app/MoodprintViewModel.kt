@@ -72,6 +72,21 @@ class MoodprintViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /**
+     * 감정+행동 조합 중 실제로 여러 번 긍정적인 변화로 이어졌던 조합을 찾아 개인화 문구를 만든다.
+     * 근거가 될 기록이 충분하지 않으면 null이라 홈 화면에서 아무 것도 표시하지 않는다.
+     */
+    val personalizationInsight: StateFlow<PersonalizationInsight?> = combine(moods, results) { moodEntries, actionResults ->
+        val moodsById = moodEntries.associateBy { it.id }
+        val outcomes = actionResults.mapNotNull { result ->
+            val mood = moodsById[result.moodId] ?: return@mapNotNull null
+            val emotions = mood.emotions.mapNotNull { raw -> runCatching { MoodEmotion.valueOf(raw) }.getOrNull() }
+            val change = result.change?.let { raw -> runCatching { MoodChange.valueOf(raw) }.getOrNull() }
+            MoodOutcome(emotions = emotions, actionId = result.actionId, change = change)
+        }
+        PersonalizationInsightService.bestInsight(outcomes)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     init {
         val hasMood = savedStateHandle.get<String>(ACTIVE_MOOD_ID) != null
         val hasSession = savedStateHandle.get<String>(ACTIVE_SESSION_ID) != null

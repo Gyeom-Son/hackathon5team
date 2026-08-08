@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.moodprint.app.MainTab
 import com.moodprint.app.MoodLog
 import com.moodprint.app.data.local.PetProgressEntity
+import com.moodprint.app.domain.PersonalizationInsight
 import com.moodprint.app.ui.collection.MoodprintCollectionScreen
 import com.moodprint.app.ui.components.MoodprintPet
 import com.moodprint.app.ui.designsystem.MoodprintColors
@@ -60,6 +61,7 @@ fun MoodprintMainScreen(
     onNicknameChange: (String) -> Unit,
     onCheckIn: (epochMillis: Long?) -> Unit,
     modifier: Modifier = Modifier,
+    insight: PersonalizationInsight? = null,
 ) {
     var showProfile by remember { mutableStateOf(false) }
     Scaffold(
@@ -96,6 +98,8 @@ fun MoodprintMainScreen(
                 onProfile = { showProfile = true },
                 onCheckIn = { onCheckIn(null) },
                 modifier = Modifier.padding(padding),
+                nickname = nickname,
+                insight = insight,
             )
             MainTab.Collection -> MoodprintCollectionScreen(
                 pets = pets,
@@ -125,6 +129,8 @@ fun MoodprintHomeContent(
     onProfile: () -> Unit,
     onCheckIn: () -> Unit,
     modifier: Modifier = Modifier,
+    nickname: String = "",
+    insight: PersonalizationInsight? = null,
 ) {
     val primaryPet = pets.firstOrNull { it.isPrimary }
     val progress = (experience.mod(100)) / 100f
@@ -182,6 +188,7 @@ fun MoodprintHomeContent(
         Text("오늘 마음은 어때요?", style = MaterialTheme.typography.headlineMedium)
         MoodprintPrimaryButton("지금 마음 기록하기", onClick = onCheckIn)
         SupportCard(logs.firstOrNull())
+        insight?.let { PersonalizationInsightCard(nickname, it) }
         Spacer(Modifier.weight(1f))
     }
 }
@@ -216,6 +223,25 @@ fun MoodprintProfileDialog(
             }
         },
     )
+}
+
+@Composable
+private fun PersonalizationInsightCard(nickname: String, insight: PersonalizationInsight, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MoodprintColors.SoftPurple,
+        shape = RoundedCornerShape(MoodprintRadius.Card),
+    ) {
+        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Small)) {
+            Text(
+                "나에게 맞는 발견",
+                style = MaterialTheme.typography.labelSmall,
+                color = MoodprintColors.Primary,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(insight.message(nickname))
+        }
+    }
 }
 
 @Composable

@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.ViewAgenda
@@ -39,14 +40,17 @@ import com.moodprint.app.ui.designsystem.MoodprintColors
 import com.moodprint.app.ui.designsystem.MoodprintSpacing
 import java.time.ZoneId
 
+private enum class RecordsViewMode { CARD, CALENDAR, MONTHLY }
+
 @Composable
 fun MoodprintRecordsScreen(
     logs: List<MoodLog>,
     onCheckIn: (epochMillis: Long?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var calendarMode by remember { mutableStateOf(false) }
+    var viewMode by remember { mutableStateOf(RecordsViewMode.CARD) }
     var calendarState by remember { mutableStateOf(MoodprintCalendarState()) }
+    var monthlyOffset by remember { mutableStateOf(0) }
     Column(
         modifier = modifier.fillMaxSize().padding(MoodprintSpacing.XLarge),
         verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Large),
@@ -65,20 +69,26 @@ fun MoodprintRecordsScreen(
         }
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
             SegmentedButton(
-                selected = !calendarMode,
-                onClick = { calendarMode = false },
-                shape = SegmentedButtonDefaults.itemShape(0, 2),
+                selected = viewMode == RecordsViewMode.CARD,
+                onClick = { viewMode = RecordsViewMode.CARD },
+                shape = SegmentedButtonDefaults.itemShape(0, 3),
                 icon = { Icon(Icons.Default.ViewAgenda, contentDescription = null) },
             ) { Text("카드") }
             SegmentedButton(
-                selected = calendarMode,
-                onClick = { calendarMode = true },
-                shape = SegmentedButtonDefaults.itemShape(1, 2),
+                selected = viewMode == RecordsViewMode.CALENDAR,
+                onClick = { viewMode = RecordsViewMode.CALENDAR },
+                shape = SegmentedButtonDefaults.itemShape(1, 3),
                 icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
             ) { Text("캘린더") }
+            SegmentedButton(
+                selected = viewMode == RecordsViewMode.MONTHLY,
+                onClick = { viewMode = RecordsViewMode.MONTHLY },
+                shape = SegmentedButtonDefaults.itemShape(2, 3),
+                icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
+            ) { Text("월별") }
         }
-        if (calendarMode) {
-            MoodprintCalendarRecords(
+        when (viewMode) {
+            RecordsViewMode.CALENDAR -> MoodprintCalendarRecords(
                 logs = logs,
                 state = calendarState,
                 onStateChange = { calendarState = it },
@@ -87,14 +97,21 @@ fun MoodprintRecordsScreen(
                 },
                 modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
             )
-        } else if (logs.isEmpty()) {
-            EmptyRecords(Modifier.weight(1f))
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Large),
-            ) {
-                items(logs, key = { it.createdAt }) { log -> MoodprintRecordCard(log) }
+            RecordsViewMode.MONTHLY -> MoodprintMonthlyRecords(
+                logs = logs,
+                monthOffset = monthlyOffset,
+                onMonthOffsetChange = { monthlyOffset = it },
+                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+            )
+            RecordsViewMode.CARD -> if (logs.isEmpty()) {
+                EmptyRecords(Modifier.weight(1f))
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Large),
+                ) {
+                    items(logs, key = { it.createdAt }) { log -> MoodprintRecordCard(log) }
+                }
             }
         }
     }

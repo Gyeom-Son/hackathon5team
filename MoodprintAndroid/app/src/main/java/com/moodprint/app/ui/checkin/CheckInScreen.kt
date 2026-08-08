@@ -34,7 +34,7 @@ fun CheckInContent(
 ) {
     var showHelp by rememberSaveable { mutableStateOf(false) }
     Column(
-        modifier.fillMaxSize().statusBarsPadding().padding(20.dp),
+        modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
