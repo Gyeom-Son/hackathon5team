@@ -109,4 +109,27 @@ class RecommendationServiceTest {
 
         assertTrue(scores.getValue(candidates[0].id) < scores.getValue(candidates[1].id))
     }
+
+    @Test fun unrelatedMoodContextDoesNotInfluencePersonalizedOutcomeScore() {
+        val target = ActionCatalog.actions.first()
+        val unrelatedPositive = ActionHistory(
+            actionId = target.id,
+            change = MoodChange.MUCH_BETTER,
+            completedAtEpochMillis = 100,
+            emotions = setOf(MoodEmotion.ANGRY),
+            energy = MoodEnergy.HIGH,
+        )
+        val withUnrelated = service.recommend(
+            listOf(MoodEmotion.SAD), MoodEnergy.LOW,
+            actions = listOf(target), history = listOf(unrelatedPositive),
+        ).single()
+        val withoutHistory = service.recommend(
+            listOf(MoodEmotion.SAD), MoodEnergy.LOW,
+            actions = listOf(target), history = emptyList(),
+        ).single()
+
+        // 최근 반복 penalty는 전체 이력으로 적용되지만, 무관한 문맥의 긍정 변화는 개인화 reason에 쓰이지 않는다.
+        assertFalse(withUnrelated.reason.contains("도움이 되었다"))
+        assertTrue(withUnrelated.score < withoutHistory.score)
+    }
 }

@@ -53,6 +53,8 @@ data class ActionHistory(
     val actionId: String,
     val change: MoodChange?,
     val completedAtEpochMillis: Long = 0,
+    val emotions: Set<MoodEmotion> = emptySet(),
+    val energy: MoodEnergy? = null,
 )
 
 data class ActionRecommendation(

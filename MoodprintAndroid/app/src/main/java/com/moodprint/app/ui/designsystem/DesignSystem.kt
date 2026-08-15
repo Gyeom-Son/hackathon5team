@@ -24,8 +24,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -146,6 +146,7 @@ fun MoodprintChoiceChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    leadingIcon: ImageVector? = null,
 ) {
     Surface(
         onClick = onClick,
@@ -155,7 +156,6 @@ fun MoodprintChoiceChip(
             .semantics {
                 this.selected = selected
                 role = Role.Checkbox
-                contentDescription = "$label, ${if (selected) "선택됨" else "선택 안 됨"}"
             },
         shape = RoundedCornerShape(MoodprintRadius.Control),
         color = if (selected) MoodprintColors.Primary else MoodprintColors.Surface,
@@ -170,6 +170,9 @@ fun MoodprintChoiceChip(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            leadingIcon?.let {
+                Icon(it, contentDescription = null, modifier = Modifier.padding(end = 5.dp))
+            }
             Text(label, style = MaterialTheme.typography.labelLarge)
             if (selected) {
                 Icon(

@@ -17,16 +17,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import com.moodprint.app.data.local.PetProgressEntity
 import com.moodprint.app.ui.designsystem.MoodprintColors
 import com.moodprint.app.ui.designsystem.MoodprintRadius
 import com.moodprint.app.ui.designsystem.MoodprintSpacing
+import com.moodprint.app.ui.components.MoodprintPet
+import com.moodprint.app.ui.designsystem.petTintFor
 
 @Composable
 fun MoodprintCollectionScreen(
     pets: List<PetProgressEntity>,
     modifier: Modifier = Modifier,
 ) {
+    val useSingleColumn = LocalDensity.current.fontScale >= 1.3f
     Column(
         modifier = modifier.fillMaxSize().padding(MoodprintSpacing.XLarge),
         verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Large),
@@ -38,19 +43,30 @@ fun MoodprintCollectionScreen(
         ) {
             Column {
                 Text("마음 생물 도감", style = MaterialTheme.typography.labelSmall, color = MoodprintColors.Primary)
-                Text("발견한 친구들", style = MaterialTheme.typography.headlineMedium)
+                Text("발견한 친구들", style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Surface(color = MoodprintColors.SoftPurple, shape = RoundedCornerShape(MoodprintRadius.Pill)) {
                 Text("${pets.count { it.isUnlocked }} / ${pets.size.coerceAtLeast(4)}", Modifier.padding(horizontal = 12.dp, vertical = 7.dp))
             }
         }
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(if (useSingleColumn) 1 else 2),
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Medium),
             horizontalArrangement = Arrangement.spacedBy(MoodprintSpacing.Medium),
         ) {
-            items(pets, key = { it.id }) { pet -> MoodprintPetCard(pet) }
+            items(pets, key = { it.id }) { pet ->
+                MoodprintPetCard(pet) { tint, unlocked ->
+                    MoodprintPet(
+                        size = 78,
+                        happy = unlocked,
+                        tint = tint,
+                        name = pet.name,
+                        unlocked = unlocked,
+                        level = pet.level,
+                    )
+                }
+            }
         }
         Surface(
             modifier = Modifier.fillMaxWidth(),

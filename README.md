@@ -39,6 +39,37 @@ APK는 `MoodprintAndroid/app/build/outputs/apk/debug/app-debug.apk`에 생성됩
 ./gradlew test
 ```
 
+Room 마이그레이션과 동기화 outbox 계측 테스트는 실행 중인 에뮬레이터에서
+`./gradlew connectedDebugAndroidTest`로 확인합니다.
+
+## Release API 설정
+
+Release 동기화를 켜려면 빌드 시 운영 API URL을 Gradle property로 전달합니다.
+
+```bash
+./gradlew :app:assembleRelease -PMOODPRINT_API_BASE_URL=https://example.com/api/v1
+```
+
+해당 property가 없으면 Release APK는 정상 빌드되지만 원격 동기화만 비활성화됩니다.
+로컬 Room 저장과 대기 작업은 유지됩니다.
+
+## 로그인 없는 백엔드 실행
+
+Moodprint는 로그인 화면 없이 서버가 자동 발급하는 익명 토큰을 사용합니다. Android는
+기기 Room DB에 먼저 저장하므로 백엔드가 꺼져 있어도 핵심 흐름을 계속 사용할 수 있습니다.
+
+```bash
+cd MoodprintBackend
+./gradlew bootRun
+```
+
+- API: `http://localhost:8080/api/v1`
+- Swagger: `http://localhost:8080/swagger-ui.html`
+- Android Emulator에서는 `http://10.0.2.2:8080/api/v1`으로 연결합니다.
+- 서버 테스트: `cd MoodprintBackend && ./gradlew test`
+
+서버 구성과 API 계약은 `MoodprintBackend/README.md`를 참고하세요.
+
 ## 포함된 흐름
 
 시작 → 캐릭터 소개 → 감정과 텍스트 기록 → 개인화 행동 추천 → 행동 실행 →

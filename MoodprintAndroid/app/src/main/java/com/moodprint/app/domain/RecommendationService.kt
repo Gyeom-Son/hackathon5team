@@ -17,11 +17,17 @@ class RecommendationService {
             .map(ActionHistory::actionId)
 
         return actions.map { action ->
-            val actionHistory = historyByAction[action.id].orEmpty()
+            val allActionHistory = historyByAction[action.id].orEmpty()
+            // 이전 행동의 감정·에너지 문맥이 저장된 경우 현재 상태와
+            // 관련된 결과만 개인화 가중치에 사용한다. 기존 문맥 없는 데이터는 호환을 위해 포함한다.
+            val contextualHistory = allActionHistory.filter { item ->
+                (item.emotions.isEmpty() || item.emotions.any(selectedEmotions::contains)) &&
+                    (item.energy == null || item.energy == energy)
+            }
             val emotionMatchCount = selectedEmotions.intersect(action.supportedEmotions).size
             val energyMatches = energy in action.supportedEnergies
-            val completedCount = actionHistory.size
-            val recordedChanges = actionHistory.mapNotNull(ActionHistory::change)
+            val completedCount = contextualHistory.size
+            val recordedChanges = contextualHistory.mapNotNull(ActionHistory::change)
             val averageChange = recordedChanges
                 .map(MoodChange::recommendationWeight)
                 .average()
@@ -43,7 +49,7 @@ class RecommendationService {
                 recommendation = ActionRecommendation(
                     action = action,
                     score = score,
-                    reason = reason(emotionMatchCount, energyMatches, energy, actionHistory),
+                    reason = reason(emotionMatchCount, energyMatches, energy, contextualHistory),
                 ),
                 emotionMatchCount = emotionMatchCount,
                 energyMatches = energyMatches,

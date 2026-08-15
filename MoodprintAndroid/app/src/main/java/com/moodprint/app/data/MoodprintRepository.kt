@@ -10,12 +10,18 @@ import com.moodprint.app.data.local.PetProgressDao
 import com.moodprint.app.data.local.PetProgressEntity
 import com.moodprint.app.data.local.RewardDao
 import com.moodprint.app.data.local.RewardEntity
+import com.moodprint.app.data.local.SyncOperationEntity
+import androidx.room.withTransaction
 import com.moodprint.app.domain.ActionCatalog
 import com.moodprint.app.domain.MoodChange
 import com.moodprint.app.domain.MoodEmotion
 import com.moodprint.app.domain.MoodEnergy
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
+import java.time.Instant
+import java.time.ZoneId
+import org.json.JSONArray
+import org.json.JSONObject
 
 data class ActiveMoodSession(val moodId: String, val sessionId: String)
 
@@ -80,21 +86,16 @@ interface MoodprintRepository {
 }
 
 class RoomMoodprintRepository(
-    private val moodDao: MoodEntryDao,
-    private val resultDao: ActionResultDao,
-    private val rewardDao: RewardDao,
-    private val petDao: PetProgressDao,
-    private val completionRewardDao: CompletionRewardDao,
+    private val database: MoodprintDatabase,
     private val now: () -> Long = System::currentTimeMillis,
     private val newId: () -> String = { UUID.randomUUID().toString() },
 ) : MoodprintRepository {
-    constructor(database: MoodprintDatabase) : this(
-        database.moodEntryDao(),
-        database.actionResultDao(),
-        database.rewardDao(),
-        database.petProgressDao(),
-        database.completionRewardDao(),
-    )
+    private val moodDao = database.moodEntryDao()
+    private val resultDao = database.actionResultDao()
+    private val rewardDao = database.rewardDao()
+    private val petDao = database.petProgressDao()
+    private val completionRewardDao = database.completionRewardDao()
+    private val syncDao = database.syncOperationDao()
 
     override val moods = moodDao.observeAll()
     override val results = resultDao.observeAll()
@@ -112,27 +113,34 @@ class RoomMoodprintRepository(
         MoodInputValidator.validateRecordDate(recordedAtEpochMillis, now())
         val storedEmotions = emotions.map { label -> MoodEmotion.entries.first { it.label == label }.name }
         val storedEnergy = MoodEnergy.entries.first { it.label == energy }.name
-        if (activeSession != null && moodDao.getById(activeSession.moodId) != null) {
-            check(moodDao.updateContent(
-                id = activeSession.moodId,
-                createdAtEpochMillis = recordedAtEpochMillis,
-                emotions = storedEmotions,
-                energy = storedEnergy,
-                note = note.trim().ifEmpty { null },
-            ) == 1)
-            return activeSession
-        }
-        val session = ActiveMoodSession(moodId = newId(), sessionId = newId())
-        moodDao.insert(
-            MoodEntryEntity(
+        val recordedLocalDate = Instant.ofEpochMilli(recordedAtEpochMillis).atZone(ZoneId.systemDefault()).toLocalDate().toString()
+        return database.withTransaction {
+            activeSession?.let { session ->
+                val previous = moodDao.getById(session.moodId) ?: return@let
+                check(resultDao.getForMood(previous.id).isEmpty())
+                val updated = previous.copy(
+                    emotions = storedEmotions,
+                    energy = storedEnergy,
+                    note = note.trim().ifEmpty { null },
+                    recordedLocalDate = recordedLocalDate,
+                )
+                check(moodDao.updateContent(updated.id, updated.recordedLocalDate, updated.emotions, updated.energy, updated.note) == 1)
+                enqueueMood(updated)
+                return@withTransaction session
+            }
+            val session = ActiveMoodSession(moodId = newId(), sessionId = newId())
+            val entry = MoodEntryEntity(
                 id = session.moodId,
-                createdAtEpochMillis = recordedAtEpochMillis,
+                createdAtEpochMillis = now(),
                 emotions = storedEmotions,
                 energy = storedEnergy,
                 note = note.trim().ifEmpty { null },
+                recordedLocalDate = recordedLocalDate,
             )
-        )
-        return session
+            moodDao.insert(entry)
+            enqueueMood(entry)
+            session
+        }
     }
 
     override suspend fun finishAction(
@@ -149,8 +157,7 @@ class RoomMoodprintRepository(
             throw MoodprintDataException.MissingActiveSession()
         }
 
-        val result = resultDao.getBySessionId(session.sessionId) ?: run {
-            val candidate = ActionResultEntity(
+        val candidate = ActionResultEntity(
                 id = newId(),
                 sessionId = session.sessionId,
                 moodId = session.moodId,
@@ -159,22 +166,20 @@ class RoomMoodprintRepository(
                 change = change?.name,
                 detailNote = detailNote?.trim()?.ifEmpty { null },
             )
-            if (resultDao.insert(candidate) == -1L) {
-                checkNotNull(resultDao.getBySessionId(session.sessionId))
-            } else {
-                candidate
-            }
-        }
 
         val collectionBefore = petDao.getNextLocked()
         val proposedReward = RewardEntity(
             id = newId(),
-            resultId = result.id,
+            resultId = candidate.id,
             experienceAwarded = EXPERIENCE_PER_COMPLETION,
             fragmentsAwarded = FRAGMENTS_PER_COMPLETION,
             appliedAtEpochMillis = now(),
         )
-        val applied = completionRewardDao.applyReward(proposedReward)
+        val write = database.withTransaction {
+            completionRewardDao.completeAction(candidate, proposedReward).also { enqueueCompletion(it.result) }
+        }
+        val result = write.result
+        val applied = write.rewardApplied
         val storedReward = checkNotNull(rewardDao.getByResultId(result.id))
         val primaryPet = checkNotNull(petDao.getPrimary())
         val collectionAfter = collectionBefore?.let { petDao.getById(it.id) }
@@ -197,5 +202,21 @@ class RoomMoodprintRepository(
     private companion object {
         const val EXPERIENCE_PER_COMPLETION = 15
         const val FRAGMENTS_PER_COMPLETION = 1
+    }
+
+    private suspend fun enqueueMood(mood: MoodEntryEntity) {
+        val body = JSONObject().apply {
+            put("clientMoodId", mood.id); put("emotions", JSONArray(mood.emotions)); put("energy", mood.energy)
+            put("note", mood.note ?: JSONObject.NULL); put("recordedDate", mood.recordedLocalDate)
+        }
+        syncDao.insertOrUpdate(SyncOperationEntity("mood:${mood.id}", syncDao.nextSequence(), "/moods", body.toString(), now()))
+    }
+
+    private suspend fun enqueueCompletion(result: ActionResultEntity) {
+        val body = JSONObject().apply {
+            put("sessionId", result.sessionId); put("moodId", result.moodId); put("actionId", result.actionId)
+            put("change", result.change ?: JSONObject.NULL); put("detailNote", result.detailNote ?: JSONObject.NULL)
+        }
+        syncDao.insertOrUpdate(SyncOperationEntity("completion:${result.sessionId}", syncDao.nextSequence(), "/action-completions", body.toString(), now()))
     }
 }

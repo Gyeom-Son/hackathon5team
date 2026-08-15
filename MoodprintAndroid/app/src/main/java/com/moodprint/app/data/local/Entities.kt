@@ -11,7 +11,20 @@ data class MoodEntryEntity(
     val createdAtEpochMillis: Long,
     val emotions: List<String>,
     val energy: String,
-    val note: String?
+    val note: String?,
+    /** yyyy-MM-dd; 사용자가 선택한 기록 날짜. */
+    val recordedLocalDate: String = "",
+)
+
+@Entity(tableName = "sync_operations", indices = [Index(value = ["sequence"], unique = true), Index("status")])
+data class SyncOperationEntity(
+    @PrimaryKey val id: String,
+    val sequence: Long,
+    val path: String,
+    val bodyJson: String,
+    val createdAtEpochMillis: Long,
+    val status: String = "PENDING",
+    val httpStatus: Int? = null,
 )
 
 @Entity(

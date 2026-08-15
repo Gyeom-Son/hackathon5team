@@ -1,6 +1,7 @@
 package com.moodprint.app.util
 
 import com.moodprint.app.MoodLog
+import com.moodprint.app.ui.records.recordedDate
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -41,7 +42,7 @@ object MonthlyStatsCalculator {
     ): MonthlyStats {
         val targetMonth = YearMonth.from(anchorDate).plusMonths(monthOffset.toLong())
         val monthLogs = logs.filter { log ->
-            YearMonth.from(Instant.ofEpochMilli(log.createdAt).atZone(zoneId).toLocalDate()) == targetMonth
+            YearMonth.from(log.recordedDate(zoneId)) == targetMonth
         }
 
         val emotionCounts = monthLogs
@@ -59,7 +60,7 @@ object MonthlyStatsCalculator {
             .sortedByDescending { it.createdAt }
             .map { log ->
                 MonthlyMoment(
-                    date = Instant.ofEpochMilli(log.createdAt).atZone(zoneId).toLocalDate(),
+                    date = log.recordedDate(zoneId),
                     emotions = log.emotions,
                     energy = log.energy,
                     text = log.note.ifBlank { log.actionDetailNote.orEmpty() },

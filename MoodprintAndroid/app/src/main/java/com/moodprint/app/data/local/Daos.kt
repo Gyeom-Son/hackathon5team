@@ -21,8 +21,34 @@ interface MoodEntryDao {
     @Query("SELECT * FROM mood_entries WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): MoodEntryEntity?
 
-    @Query("UPDATE mood_entries SET createdAtEpochMillis = :createdAtEpochMillis, emotions = :emotions, energy = :energy, note = :note WHERE id = :id")
-    suspend fun updateContent(id: String, createdAtEpochMillis: Long, emotions: List<String>, energy: String, note: String?): Int
+    @Query("DELETE FROM mood_entries WHERE id = :id")
+    suspend fun deleteById(id: String): Int
+    @Query("DELETE FROM mood_entries") suspend fun deleteAll()
+
+    @Query("UPDATE mood_entries SET recordedLocalDate = :recordedLocalDate, emotions = :emotions, energy = :energy, note = :note WHERE id = :id")
+    suspend fun updateContent(id: String, recordedLocalDate: String, emotions: List<String>, energy: String, note: String?): Int
+}
+
+@Dao
+interface SyncOperationDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(operation: SyncOperationEntity): Long
+    @Query("UPDATE sync_operations SET path = :path, bodyJson = :bodyJson, createdAtEpochMillis = :createdAt, status = 'PENDING', httpStatus = NULL WHERE id = :id")
+    suspend fun updatePayload(id: String, path: String, bodyJson: String, createdAt: Long): Int
+    @Transaction
+    suspend fun insertOrUpdate(operation: SyncOperationEntity) {
+        if (insert(operation) == -1L) {
+            check(updatePayload(operation.id, operation.path, operation.bodyJson, operation.createdAtEpochMillis) == 1)
+        }
+    }
+    @Query("SELECT * FROM sync_operations WHERE status = 'PENDING' ORDER BY sequence") suspend fun pending(): List<SyncOperationEntity>
+    @Query("SELECT * FROM sync_operations WHERE status = 'FAILED' ORDER BY sequence") suspend fun failed(): List<SyncOperationEntity>
+    @Query("SELECT COUNT(*) FROM sync_operations WHERE status = 'PENDING'") fun observePendingCount(): Flow<Int>
+    @Query("SELECT COUNT(*) FROM sync_operations WHERE status = 'FAILED'") fun observeFailedCount(): Flow<Int>
+    @Query("UPDATE sync_operations SET status = 'FAILED', httpStatus = :httpStatus WHERE id = :id") suspend fun markFailed(id: String, httpStatus: Int): Int
+    @Query("UPDATE sync_operations SET status = 'PENDING', httpStatus = NULL WHERE status = 'FAILED'") suspend fun retryFailed(): Int
+    @Query("DELETE FROM sync_operations WHERE id = :id") suspend fun delete(id: String): Int
+    @Query("DELETE FROM sync_operations") suspend fun clear()
+    @Query("SELECT COALESCE(MAX(sequence), 0) + 1 FROM sync_operations") suspend fun nextSequence(): Long
 }
 
 @Dao
@@ -35,6 +61,9 @@ interface ActionResultDao {
 
     @Query("SELECT * FROM action_results WHERE moodId = :moodId ORDER BY completedAtEpochMillis")
     suspend fun getForMood(moodId: String): List<ActionResultEntity>
+
+    @Query("SELECT * FROM action_results ORDER BY completedAtEpochMillis")
+    suspend fun getAll(): List<ActionResultEntity>
 
     @Query("SELECT * FROM action_results WHERE sessionId = :sessionId LIMIT 1")
     suspend fun getBySessionId(sessionId: String): ActionResultEntity?
@@ -56,6 +85,7 @@ interface RewardDao {
 interface PetProgressDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(pets: List<PetProgressEntity>)
+    @Query("DELETE FROM pet_progress") suspend fun deleteAll()
 
     @Query("SELECT * FROM pet_progress ORDER BY isPrimary DESC, isUnlocked DESC, name")
     fun observeAll(): Flow<List<PetProgressEntity>>
@@ -100,6 +130,12 @@ interface PetProgressDao {
 @Dao
 interface CompletionRewardDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertResult(result: ActionResultEntity): Long
+
+    @Query("SELECT * FROM action_results WHERE sessionId = :sessionId LIMIT 1")
+    suspend fun getResultBySessionId(sessionId: String): ActionResultEntity?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertReward(reward: RewardEntity): Long
 
     @Query("SELECT id FROM pet_progress WHERE isPrimary = 1 LIMIT 1")
@@ -143,4 +179,17 @@ interface CompletionRewardDao {
         }
         return true
     }
+
+    /** 행동 결과 생성과 보상·펫 성장을 하나의 Room 트랜잭션으로 처리한다. */
+    @Transaction
+    suspend fun completeAction(candidate: ActionResultEntity, reward: RewardEntity): CompletionWrite {
+        val result = getResultBySessionId(candidate.sessionId) ?: run {
+            if (insertResult(candidate) == -1L) checkNotNull(getResultBySessionId(candidate.sessionId))
+            else candidate
+        }
+        val applied = applyReward(reward.copy(resultId = result.id))
+        return CompletionWrite(result, applied)
+    }
 }
+
+data class CompletionWrite(val result: ActionResultEntity, val rewardApplied: Boolean)
