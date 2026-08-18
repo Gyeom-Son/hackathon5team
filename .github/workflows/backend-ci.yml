@@ -1,0 +1,54 @@
+name: Backend CI
+
+on:
+  pull_request:
+    paths:
+      - "MoodprintBackend/**"
+      - ".github/workflows/backend-ci.yml"
+  push:
+    branches: [main, dev]
+    paths:
+      - "MoodprintBackend/**"
+      - ".github/workflows/backend-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: moodprint
+          POSTGRES_USER: moodprint
+          POSTGRES_PASSWORD: moodprint
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U moodprint -d moodprint"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: MoodprintBackend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - name: Test Flyway and API with H2
+        run: ./gradlew clean test bootJar --no-daemon
+      - name: Test Flyway and API with PostgreSQL
+        env:
+          SPRING_PROFILES_ACTIVE: postgres
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/moodprint
+          SPRING_DATASOURCE_USERNAME: moodprint
+          SPRING_DATASOURCE_PASSWORD: moodprint
+        run: ./gradlew test --rerun-tasks --no-daemon
+      - name: Build backend container (no deployment)
+        run: docker build -t moodprint-backend:ci .
