@@ -247,46 +247,47 @@ enum ActionCatalogSeed {
     }
 }
 
+/// 마음 생물 도감 16종의 고정 UUID. 참고 디자인(`mongsili_animal_growth_stages_2.html`)의
+/// 동물 순서(고양이→강아지→토끼→곰→여우→판다→사자→호랑이→코알라→다람쥐→펭귄→부엉이→양→돼지→사슴→병아리)와 동일합니다.
+enum StablePetIDs {
+    static let ids: [AnimalKind: UUID] = [
+        .cat: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421101")!,
+        .dog: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421102")!,
+        .rabbit: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421103")!,
+        .bear: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421104")!,
+        .fox: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421105")!,
+        .panda: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421106")!,
+        .lion: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421107")!,
+        .tiger: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421108")!,
+        .koala: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421109")!,
+        .squirrel: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421110")!,
+        .penguin: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421111")!,
+        .owl: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421112")!,
+        .sheep: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421113")!,
+        .pig: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421114")!,
+        .deer: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421115")!,
+        .chick: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421116")!,
+    ]
+}
+
 enum PetCatalogSeed {
+    /// 기본 동반자는 고양이입니다. 나머지 15종은 잠금 상태로 시작해 조각을 모으며 도감을 채웁니다.
+    static let primaryAnimal: AnimalKind = .cat
+
     static var pets: [PetProgressRecord] {
-        [
-            PetProgressRecord(
-                id: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421101")!,
-                name: "몽실이",
-                colorName: "lavender",
-                level: 1,
+        AnimalKind.allCases.map { animal in
+            let isPrimary = animal == primaryAnimal
+            return PetProgressRecord(
+                id: StablePetIDs.ids[animal]!,
+                name: animal.koreanName,
+                colorName: animal.storageKey,
+                level: isPrimary ? 1 : 0,
                 experience: 0,
-                fragments: 3,
-                isUnlocked: true,
-                isPrimary: true
-            ),
-            PetProgressRecord(
-                id: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421102")!,
-                name: "폴짝이",
-                colorName: "mint",
-                level: 0,
-                experience: 0,
-                fragments: 0,
-                isUnlocked: false
-            ),
-            PetProgressRecord(
-                id: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421103")!,
-                name: "끄적이",
-                colorName: "coral",
-                level: 0,
-                experience: 0,
-                fragments: 0,
-                isUnlocked: false
-            ),
-            PetProgressRecord(
-                id: UUID(uuidString: "4B0EE180-65EB-4703-89EA-F695DF421104")!,
-                name: "반짝이",
-                colorName: "yellow",
-                level: 0,
-                experience: 0,
-                fragments: 0,
-                isUnlocked: false
+                fragments: isPrimary ? 3 : 0,
+                requiredFragments: isPrimary ? 3 : 5,
+                isUnlocked: isPrimary,
+                isPrimary: isPrimary
             )
-        ]
+        }
     }
 }

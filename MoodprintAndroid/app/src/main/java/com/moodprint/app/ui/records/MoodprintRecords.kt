@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -69,10 +71,10 @@ fun MoodprintCalendarRecords(
     today: LocalDate = LocalDate.now(),
     zoneId: ZoneId = ZoneId.systemDefault(),
 ) {
-    val dates = logs.map { Instant.ofEpochMilli(it.createdAt).atZone(zoneId).toLocalDate() }
+    val dates = logs.map { it.recordedDate(zoneId) }
     val month = CalendarMonthCalculator.calculate(today, state.monthOffset, dates)
     val logsByDate = logs.groupBy {
-        Instant.ofEpochMilli(it.createdAt).atZone(zoneId).toLocalDate()
+        it.recordedDate(zoneId)
     }
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Medium)) {
@@ -137,7 +139,9 @@ fun MoodprintCalendarRecords(
                 style = MaterialTheme.typography.titleMedium,
             )
             if (selectedLogs.isEmpty()) {
-                Text("이날은 남긴 기록이 없어요.", color = MoodprintColors.SecondaryText)
+                Surface(color = MoodprintColors.SoftPurple.copy(alpha = 0.55f), shape = RoundedCornerShape(MoodprintRadius.Control)) {
+                    Text("이날은 남긴 기록이 없어요. 지금 떠오르는 마음을 편안하게 남겨보세요.", Modifier.fillMaxWidth().padding(14.dp), color = MoodprintColors.SecondaryText)
+                }
             } else {
                 selectedLogs.forEach { MoodprintRecordCard(it) }
             }
@@ -153,9 +157,13 @@ fun MoodprintCalendarRecords(
 
 @Composable
 fun MoodprintRecordCard(log: MoodLog, modifier: Modifier = Modifier) {
-    val time = Instant.ofEpochMilli(log.createdAt)
-        .atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofPattern("HH:mm"))
+    val zoneId = ZoneId.systemDefault()
+    val createdDateTime = Instant.ofEpochMilli(log.createdAt).atZone(zoneId)
+    val timeLabel = if (log.recordedDate(zoneId) == createdDateTime.toLocalDate()) {
+        createdDateTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+    } else {
+        "나중에 작성"
+    }
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MoodprintColors.Surface,
@@ -167,15 +175,15 @@ fun MoodprintRecordCard(log: MoodLog, modifier: Modifier = Modifier) {
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
-                    Instant.ofEpochMilli(log.createdAt).atZone(ZoneId.systemDefault())
-                        .format(DateTimeFormatter.ofPattern("M월 d일 E요일", Locale.KOREA)),
+                    log.recordedDate(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("M월 d일 E요일", Locale.KOREA)),
                     fontWeight = FontWeight.Bold,
                 )
-                Text(time, color = MoodprintColors.SecondaryText)
+                Text(timeLabel, color = MoodprintColors.SecondaryText, style = MaterialTheme.typography.bodySmall)
             }
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            FlowRow(
+                Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 log.emotions.forEach { RecordTag(it, MoodprintColors.SoftPurple) }
                 RecordTag("에너지 ${log.energy}", MoodprintColors.Mint)
@@ -207,6 +215,10 @@ fun MoodprintRecordCard(log: MoodLog, modifier: Modifier = Modifier) {
     }
 }
 
+internal fun MoodLog.recordedDate(zoneId: ZoneId) = runCatching {
+    java.time.LocalDate.parse(recordedLocalDate)
+}.getOrElse { Instant.ofEpochMilli(createdAt).atZone(zoneId).toLocalDate() }
+
 @Composable
 private fun CalendarDay(
     date: LocalDate?,
@@ -226,7 +238,7 @@ private fun CalendarDay(
     }
     Box(
         modifier = modifier
-            .height(42.dp)
+            .height(48.dp)
             .then(if (date != null && enabled) Modifier.clickable(role = Role.Button) { onSelect(date) } else Modifier)
             .then(if (description != null) Modifier.semantics {
                 contentDescription = description
@@ -264,6 +276,14 @@ private fun CalendarDay(
                         .background(MoodprintColors.Primary, CircleShape),
                 )
             }
+            if (hasRecord && isSelected) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .size(5.dp)
+                        .background(Color.White, CircleShape),
+                )
+            }
         }
     }
 }
@@ -284,13 +304,20 @@ private fun CalendarWeekHeader() {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun CalendarLegend() {
-    Row(horizontalArrangement = Arrangement.spacedBy(MoodprintSpacing.Large)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(MoodprintSpacing.Large),
+        verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Small),
+    ) {
         LegendItem(MoodprintColors.SoftPurple, "기록 있음")
         LegendItem(MoodprintColors.Primary, "선택")
         LegendItem(Color.Transparent, "오늘", showDot = true)
     }
 }
+
+internal val MoodLog.stableKey: String
+    get() = id.ifBlank { "${createdAt}:${recordedLocalDate}:${emotions.joinToString("|")}" }
 
 @Composable
 private fun LegendItem(color: Color, label: String, showDot: Boolean = false) {

@@ -154,6 +154,15 @@ final class AppState: ObservableObject {
         route = .main
     }
 
+    /// 해금된 동물을 홈 화면 대표 동반자로 바꾼다. 펫마다 레벨·경험치는 그대로 따로 유지된다.
+    func setPrimaryPet(_ pet: PetProgressRecord) {
+        guard pet.isUnlocked, !pet.isPrimary else { return }
+        perform {
+            try petRepository.setPrimary(id: pet.id)
+            try refresh()
+        }
+    }
+
     func retry() {
         errorMessage = nil
         prepare()

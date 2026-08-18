@@ -26,6 +26,8 @@ import com.moodprint.app.ui.components.MoodprintPage
 import com.moodprint.app.ui.components.MoodprintPet
 import com.moodprint.app.ui.components.MoodprintStatusTag
 import com.moodprint.app.ui.designsystem.MoodprintColors
+import com.moodprint.app.domain.AnimalKind
+import com.moodprint.app.ui.model.ActionChangeUi
 
 @Composable
 fun RewardScreen(
@@ -35,6 +37,12 @@ fun RewardScreen(
     onHome: () -> Unit,
     onCollection: () -> Unit,
     modifier: Modifier = Modifier,
+    change: ActionChangeUi? = null,
+    petName: String = AnimalKind.CAT.koreanName,
+    petLevel: Int = 1,
+    petColorName: String = AnimalKind.CAT.storageKey,
+    unlockedPetColorName: String? = null,
+    didLevelUp: Boolean = false,
 ) = MoodprintPage(modifier) {
     Column(
         Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
@@ -43,12 +51,12 @@ fun RewardScreen(
     ) {
         MoodprintEyebrow("행동 완료")
         Spacer(Modifier.height(18.dp))
-        MoodprintPet(158, happy = true)
+        MoodprintPet(142, happy = true, name = petName, level = petLevel, colorName = petColorName)
         Spacer(Modifier.height(14.dp))
         MoodprintStatusTag("✨ 성장 경험치 +$experience", MoodprintColors.Warm)
         Spacer(Modifier.height(14.dp))
         Text(
-            "몽실이가 조금 성장했어요",
+            if (didLevelUp) "$petName 단계가 올랐어요" else "$petName 성장 경험치를 얻었어요",
             Modifier.fillMaxWidth(),
             fontSize = 25.sp,
             fontWeight = FontWeight.Bold,
@@ -56,14 +64,27 @@ fun RewardScreen(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "어떤 변화든 나를 이해하는 중요한 기록이에요.",
+            when (change) {
+                null, ActionChangeUi.SKIP -> "기록하지 않아도 괜찮아요. 행동을 완료한 것만으로 충분해요."
+                ActionChangeUi.HARDER, ActionChangeUi.SAME -> "변화가 크지 않아도 괜찮아요. 나를 이해하는 중요한 기록이에요."
+                ActionChangeUi.BETTER, ActionChangeUi.MUCH_BETTER -> "작은 행동을 완료한 오늘의 경험을 기억해둘게요."
+            },
             Modifier.fillMaxWidth(),
-            color = Color.DarkGray,
+            color = MoodprintColors.SecondaryText,
             textAlign = TextAlign.Center,
         )
         if (fragments > 0) {
             Spacer(Modifier.height(14.dp))
-            MoodprintCard {
+            MoodprintCard(color = MoodprintColors.SoftPurple) {
+                if (unlockedPetName != null) {
+                    MoodprintPet(
+                        size = 76,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                        happy = true,
+                        name = unlockedPetName,
+                        colorName = unlockedPetColorName ?: AnimalKind.CAT.storageKey,
+                    )
+                }
                 Text(
                     if (unlockedPetName != null) "$unlockedPetName 발견!" else "새로운 도감 조각 발견!",
                     Modifier.fillMaxWidth(),

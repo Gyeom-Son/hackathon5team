@@ -17,11 +17,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.moodprint.app.domain.AnimalKind
 import com.moodprint.app.ui.components.MoodprintButton
 import com.moodprint.app.ui.components.MoodprintEyebrow
 import com.moodprint.app.ui.components.MoodprintNavigationBackButton
@@ -53,7 +53,7 @@ fun WelcomeScreen(onStart: () -> Unit, modifier: Modifier = Modifier) = Moodprin
         Text(
             "감정과 행동의 변화를 기록하며\n나만의 마음 생물 도감을 채워보세요.",
             Modifier.fillMaxWidth(),
-            color = Color.DarkGray,
+            color = MoodprintColors.SecondaryText,
             lineHeight = 24.sp,
             textAlign = TextAlign.Center,
         )
@@ -76,7 +76,7 @@ fun IntroScreen(
         MoodprintPet(158)
         Spacer(Modifier.height(20.dp))
         Text(
-            "안녕! 나는 몽실이야.",
+            "안녕! 나는 ${AnimalKind.CAT.koreanName}야.",
             Modifier.fillMaxWidth(),
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold,
@@ -88,7 +88,7 @@ fun IntroScreen(
         Text(
             "작은 행동을 실험할수록\n새로운 마음 생물을 발견할 수 있어.",
             Modifier.fillMaxWidth(),
-            color = Color.DarkGray,
+            color = MoodprintColors.SecondaryText,
             textAlign = TextAlign.Center,
         )
     }
@@ -116,7 +116,7 @@ fun ProfileScreen(
         Text(
             "계정을 만들지 않고 이 기기에서만 사용할 닉네임이에요.",
             Modifier.fillMaxWidth(),
-            color = Color.DarkGray,
+            color = MoodprintColors.SecondaryText,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(18.dp))
@@ -129,7 +129,7 @@ fun ProfileScreen(
             shape = RoundedCornerShape(14.dp),
         )
         Spacer(Modifier.height(6.dp))
-        Text("입력하지 않으면 ‘마음 여행자’로 시작해요.", color = Color.DarkGray, fontSize = 13.sp)
+        Text("입력하지 않으면 ‘마음 여행자’로 시작해요.", color = MoodprintColors.SecondaryText, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
     }
-    MoodprintButton("로그인 없이 시작하기", onComplete)
+    MoodprintButton("이 기기에서 시작하기", onComplete)
 }

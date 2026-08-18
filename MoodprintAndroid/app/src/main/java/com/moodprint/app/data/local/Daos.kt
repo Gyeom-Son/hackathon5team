@@ -21,8 +21,34 @@ interface MoodEntryDao {
     @Query("SELECT * FROM mood_entries WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): MoodEntryEntity?
 
-    @Query("UPDATE mood_entries SET createdAtEpochMillis = :createdAtEpochMillis, emotions = :emotions, energy = :energy, note = :note WHERE id = :id")
-    suspend fun updateContent(id: String, createdAtEpochMillis: Long, emotions: List<String>, energy: String, note: String?): Int
+    @Query("DELETE FROM mood_entries WHERE id = :id")
+    suspend fun deleteById(id: String): Int
+    @Query("DELETE FROM mood_entries") suspend fun deleteAll()
+
+    @Query("UPDATE mood_entries SET recordedLocalDate = :recordedLocalDate, emotions = :emotions, energy = :energy, note = :note WHERE id = :id")
+    suspend fun updateContent(id: String, recordedLocalDate: String, emotions: List<String>, energy: String, note: String?): Int
+}
+
+@Dao
+interface SyncOperationDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(operation: SyncOperationEntity): Long
+    @Query("UPDATE sync_operations SET path = :path, bodyJson = :bodyJson, createdAtEpochMillis = :createdAt, status = 'PENDING', httpStatus = NULL WHERE id = :id")
+    suspend fun updatePayload(id: String, path: String, bodyJson: String, createdAt: Long): Int
+    @Transaction
+    suspend fun insertOrUpdate(operation: SyncOperationEntity) {
+        if (insert(operation) == -1L) {
+            check(updatePayload(operation.id, operation.path, operation.bodyJson, operation.createdAtEpochMillis) == 1)
+        }
+    }
+    @Query("SELECT * FROM sync_operations WHERE status = 'PENDING' ORDER BY sequence") suspend fun pending(): List<SyncOperationEntity>
+    @Query("SELECT * FROM sync_operations WHERE status = 'FAILED' ORDER BY sequence") suspend fun failed(): List<SyncOperationEntity>
+    @Query("SELECT COUNT(*) FROM sync_operations WHERE status = 'PENDING'") fun observePendingCount(): Flow<Int>
+    @Query("SELECT COUNT(*) FROM sync_operations WHERE status = 'FAILED'") fun observeFailedCount(): Flow<Int>
+    @Query("UPDATE sync_operations SET status = 'FAILED', httpStatus = :httpStatus WHERE id = :id") suspend fun markFailed(id: String, httpStatus: Int): Int
+    @Query("UPDATE sync_operations SET status = 'PENDING', httpStatus = NULL WHERE status = 'FAILED'") suspend fun retryFailed(): Int
+    @Query("DELETE FROM sync_operations WHERE id = :id") suspend fun delete(id: String): Int
+    @Query("DELETE FROM sync_operations") suspend fun clear()
+    @Query("SELECT COALESCE(MAX(sequence), 0) + 1 FROM sync_operations") suspend fun nextSequence(): Long
 }
 
 @Dao
@@ -35,6 +61,9 @@ interface ActionResultDao {
 
     @Query("SELECT * FROM action_results WHERE moodId = :moodId ORDER BY completedAtEpochMillis")
     suspend fun getForMood(moodId: String): List<ActionResultEntity>
+
+    @Query("SELECT * FROM action_results ORDER BY completedAtEpochMillis")
+    suspend fun getAll(): List<ActionResultEntity>
 
     @Query("SELECT * FROM action_results WHERE sessionId = :sessionId LIMIT 1")
     suspend fun getBySessionId(sessionId: String): ActionResultEntity?
@@ -56,6 +85,7 @@ interface RewardDao {
 interface PetProgressDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(pets: List<PetProgressEntity>)
+    @Query("DELETE FROM pet_progress") suspend fun deleteAll()
 
     @Query("SELECT * FROM pet_progress ORDER BY isPrimary DESC, isUnlocked DESC, name")
     fun observeAll(): Flow<List<PetProgressEntity>>
@@ -69,7 +99,42 @@ interface PetProgressDao {
     @Query("SELECT * FROM pet_progress WHERE isPrimary = 1 LIMIT 1")
     suspend fun getPrimary(): PetProgressEntity?
 
-    @Query("SELECT * FROM pet_progress WHERE isPrimary = 0 AND isUnlocked = 0 ORDER BY CASE id WHEN '4B0EE180-65EB-4703-89EA-F695DF421102' THEN 1 WHEN '4B0EE180-65EB-4703-89EA-F695DF421103' THEN 2 ELSE 3 END LIMIT 1")
+    @Query("UPDATE pet_progress SET isPrimary = 0 WHERE isPrimary = 1")
+    suspend fun clearPrimary(): Int
+
+    @Query("UPDATE pet_progress SET isPrimary = 1 WHERE id = :petId AND isUnlocked = 1")
+    suspend fun markPrimary(petId: String): Int
+
+    /**
+     * 해금된 동물을 홈 화면 대표 동반자로 바꾼다. 레벨·경험치는 펫마다 독립적으로 저장되어 있으므로
+     * isPrimary 플래그만 옮기면 되고, 각자의 성장치는 그대로 유지된다.
+     */
+    @Transaction
+    suspend fun setPrimary(petId: String): Boolean {
+        val target = getById(petId) ?: return false
+        if (!target.isUnlocked) return false
+        if (target.isPrimary) return true
+        clearPrimary()
+        return markPrimary(petId) == 1
+    }
+
+    @Query("SELECT * FROM pet_progress WHERE isPrimary = 0 AND isUnlocked = 0 ORDER BY CASE id " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421102' THEN 1 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421103' THEN 2 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421104' THEN 3 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421105' THEN 4 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421106' THEN 5 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421107' THEN 6 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421108' THEN 7 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421109' THEN 8 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421110' THEN 9 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421111' THEN 10 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421112' THEN 11 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421113' THEN 12 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421114' THEN 13 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421115' THEN 14 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421116' THEN 15 " +
+        "ELSE 16 END LIMIT 1")
     suspend fun getNextLocked(): PetProgressEntity?
 
     @Query(
@@ -100,12 +165,34 @@ interface PetProgressDao {
 @Dao
 interface CompletionRewardDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertResult(result: ActionResultEntity): Long
+
+    @Query("SELECT * FROM action_results WHERE sessionId = :sessionId LIMIT 1")
+    suspend fun getResultBySessionId(sessionId: String): ActionResultEntity?
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertReward(reward: RewardEntity): Long
 
     @Query("SELECT id FROM pet_progress WHERE isPrimary = 1 LIMIT 1")
     suspend fun getPrimaryPetId(): String?
 
-    @Query("SELECT id FROM pet_progress WHERE isPrimary = 0 AND isUnlocked = 0 ORDER BY CASE id WHEN '4B0EE180-65EB-4703-89EA-F695DF421102' THEN 1 WHEN '4B0EE180-65EB-4703-89EA-F695DF421103' THEN 2 ELSE 3 END LIMIT 1")
+    @Query("SELECT id FROM pet_progress WHERE isPrimary = 0 AND isUnlocked = 0 ORDER BY CASE id " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421102' THEN 1 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421103' THEN 2 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421104' THEN 3 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421105' THEN 4 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421106' THEN 5 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421107' THEN 6 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421108' THEN 7 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421109' THEN 8 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421110' THEN 9 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421111' THEN 10 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421112' THEN 11 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421113' THEN 12 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421114' THEN 13 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421115' THEN 14 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421116' THEN 15 " +
+        "ELSE 16 END LIMIT 1")
     suspend fun getNextLockedPetId(): String?
 
     @Query(
@@ -143,4 +230,17 @@ interface CompletionRewardDao {
         }
         return true
     }
+
+    /** 행동 결과 생성과 보상·펫 성장을 하나의 Room 트랜잭션으로 처리한다. */
+    @Transaction
+    suspend fun completeAction(candidate: ActionResultEntity, reward: RewardEntity): CompletionWrite {
+        val result = getResultBySessionId(candidate.sessionId) ?: run {
+            if (insertResult(candidate) == -1L) checkNotNull(getResultBySessionId(candidate.sessionId))
+            else candidate
+        }
+        val applied = applyReward(reward.copy(resultId = result.id))
+        return CompletionWrite(result, applied)
+    }
 }
+
+data class CompletionWrite(val result: ActionResultEntity, val rewardApplied: Boolean)

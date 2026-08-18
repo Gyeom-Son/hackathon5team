@@ -1,6 +1,7 @@
 # macOS
 .DS_Store
 MoodprintAndroid/.gradle/
+MoodprintAndroid/.kotlin/
 MoodprintAndroid/local.properties
 MoodprintAndroid/**/build/
 MoodprintAndroid/.idea/

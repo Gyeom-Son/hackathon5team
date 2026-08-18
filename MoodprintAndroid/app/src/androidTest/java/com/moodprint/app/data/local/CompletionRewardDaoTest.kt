@@ -53,6 +53,19 @@ class CompletionRewardDaoTest {
         assertNull(database.rewardDao().getByResultId(result.id))
     }
 
+    @Test
+    fun completeActionRollsBackResultWhenRewardCannotBeApplied() = runBlocking {
+        val mood = MoodEntryEntity("atomic-mood", 1, listOf("ANXIOUS"), "MEDIUM", null)
+        database.moodEntryDao().insert(mood)
+        val result = ActionResultEntity("atomic-result", "atomic-session", mood.id, "action", 2, null, null)
+        val reward = RewardEntity("atomic-reward", result.id, 15, 1, 3)
+
+        runCatching { database.completionRewardDao().completeAction(result, reward) }
+
+        assertNull(database.actionResultDao().getBySessionId(result.sessionId))
+        assertNull(database.rewardDao().getByResultId(result.id))
+    }
+
     private suspend fun seedResult(): ActionResultEntity {
         val mood = MoodEntryEntity("mood", 1, listOf("불안"), "보통", null)
         database.moodEntryDao().insert(mood)

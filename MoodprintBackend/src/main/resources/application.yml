@@ -1,0 +1,66 @@
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/moodprint;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  flyway:
+    enabled: false
+  jackson:
+    default-property-inclusion: non_null
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: framework
+  compression:
+    enabled: true
+    mime-types: application/json,text/plain,text/html
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+moodprint:
+  time-zone: ${MOODPRINT_TIME_ZONE:Asia/Seoul}
+  max-request-bytes: ${MOODPRINT_MAX_REQUEST_BYTES:16384}
+  cors:
+    allowed-origins: ${MOODPRINT_CORS_ALLOWED_ORIGINS:}
+  session-rate-limit:
+    requests: ${MOODPRINT_SESSION_RATE_LIMIT_REQUESTS:20}
+    window-seconds: ${MOODPRINT_SESSION_RATE_LIMIT_WINDOW_SECONDS:60}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/moodprint}
+    username: ${DATABASE_USERNAME:moodprint}
+    password: ${DATABASE_PASSWORD:moodprint}
+    hikari:
+      maximum-pool-size: ${DATABASE_MAX_POOL_SIZE:5}
+      minimum-idle: ${DATABASE_MIN_IDLE:0}
+      connection-timeout: 10000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}

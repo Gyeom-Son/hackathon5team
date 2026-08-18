@@ -49,6 +49,10 @@ protocol PetRepository {
     func seedIfNeeded() throws
     func fetchAll() throws -> [PetProgressRecord]
     func fetchPrimary() throws -> PetProgressRecord?
+
+    /// 해금된 동물을 홈 화면 대표 동반자로 바꾼다. 각 펫의 레벨·경험치는 서로 독립적으로 유지된다.
+    @discardableResult
+    func setPrimary(id: UUID) throws -> Bool
 }
 
 @MainActor
@@ -189,5 +193,20 @@ final class SwiftDataPetRepository: PetRepository {
     func fetchPrimary() throws -> PetProgressRecord? {
         try context.fetch(FetchDescriptor<PetProgressRecord>())
             .first(where: \.isPrimary)
+    }
+
+    @discardableResult
+    func setPrimary(id: UUID) throws -> Bool {
+        let records = try context.fetch(FetchDescriptor<PetProgressRecord>())
+        guard let target = records.first(where: { $0.id == id }), target.isUnlocked else {
+            return false
+        }
+        guard !target.isPrimary else { return true }
+        for record in records where record.isPrimary {
+            record.isPrimary = false
+        }
+        target.isPrimary = true
+        try context.save()
+        return true
     }
 }

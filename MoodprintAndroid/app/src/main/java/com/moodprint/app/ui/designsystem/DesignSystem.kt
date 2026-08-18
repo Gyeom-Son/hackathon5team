@@ -24,8 +24,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -46,10 +46,6 @@ object MoodprintColors {
     val Ink = Color(0xFF2E293F)
     val SecondaryText = Color(0xFF6E697D)
     val Border = Color(0xFFD7CFDF)
-    val PetPurple = Color(0xFFC2ADE5)
-    val PetMint = Color(0xFF9ED6C4)
-    val PetCoral = Color(0xFFEBA8A0)
-    val PetYellow = Color(0xFFE6C46B)
 
     val scheme: ColorScheme = lightColorScheme(
         primary = Primary,
@@ -146,6 +142,7 @@ fun MoodprintChoiceChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    leadingIcon: ImageVector? = null,
 ) {
     Surface(
         onClick = onClick,
@@ -155,7 +152,6 @@ fun MoodprintChoiceChip(
             .semantics {
                 this.selected = selected
                 role = Role.Checkbox
-                contentDescription = "$label, ${if (selected) "선택됨" else "선택 안 됨"}"
             },
         shape = RoundedCornerShape(MoodprintRadius.Control),
         color = if (selected) MoodprintColors.Primary else MoodprintColors.Surface,
@@ -170,6 +166,9 @@ fun MoodprintChoiceChip(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            leadingIcon?.let {
+                Icon(it, contentDescription = null, modifier = Modifier.padding(end = 5.dp))
+            }
             Text(label, style = MaterialTheme.typography.labelLarge)
             if (selected) {
                 Icon(
@@ -205,11 +204,4 @@ fun MoodprintChoiceGridItem(
             enabled = enabled,
         )
     }
-}
-
-fun petTintFor(colorName: String): Color = when (colorName.lowercase()) {
-    "mint" -> MoodprintColors.PetMint
-    "coral" -> MoodprintColors.PetCoral
-    "yellow" -> MoodprintColors.PetYellow
-    else -> MoodprintColors.PetPurple
 }

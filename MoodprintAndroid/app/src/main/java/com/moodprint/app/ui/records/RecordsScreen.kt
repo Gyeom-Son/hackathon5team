@@ -24,11 +24,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Tab
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,9 +52,19 @@ fun MoodprintRecordsScreen(
     onCheckIn: (epochMillis: Long?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var viewMode by remember { mutableStateOf(RecordsViewMode.CARD) }
-    var calendarState by remember { mutableStateOf(MoodprintCalendarState()) }
-    var monthlyOffset by remember { mutableStateOf(0) }
+    var viewModeOrdinal by rememberSaveable { mutableIntStateOf(RecordsViewMode.CARD.ordinal) }
+    val viewMode = RecordsViewMode.entries.getOrElse(viewModeOrdinal) { RecordsViewMode.CARD }
+    var calendarMonthOffset by rememberSaveable { mutableIntStateOf(0) }
+    var selectedDateValue by rememberSaveable { mutableStateOf<String?>(null) }
+    val calendarState = MoodprintCalendarState(
+        monthOffset = calendarMonthOffset,
+        selectedDate = selectedDateValue?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
+    )
+    var monthlyOffset by rememberSaveable { mutableIntStateOf(0) }
+    // Keep each tab's scroll independently. A single positional remember inside
+    // the when branch made another tab open halfway down the page.
+    val calendarScrollState = rememberScrollState()
+    val monthlyScrollState = rememberScrollState()
     Column(
         modifier = modifier.fillMaxSize().padding(MoodprintSpacing.XLarge),
         verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Large),
@@ -67,41 +81,35 @@ fun MoodprintRecordsScreen(
                 Text("새 기록")
             }
         }
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = viewMode == RecordsViewMode.CARD,
-                onClick = { viewMode = RecordsViewMode.CARD },
-                shape = SegmentedButtonDefaults.itemShape(0, 3),
-                icon = { Icon(Icons.Default.ViewAgenda, contentDescription = null) },
-            ) { Text("카드") }
-            SegmentedButton(
-                selected = viewMode == RecordsViewMode.CALENDAR,
-                onClick = { viewMode = RecordsViewMode.CALENDAR },
-                shape = SegmentedButtonDefaults.itemShape(1, 3),
-                icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
-            ) { Text("캘린더") }
-            SegmentedButton(
-                selected = viewMode == RecordsViewMode.MONTHLY,
-                onClick = { viewMode = RecordsViewMode.MONTHLY },
-                shape = SegmentedButtonDefaults.itemShape(2, 3),
-                icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
-            ) { Text("월별") }
+        PrimaryTabRow(selectedTabIndex = viewMode.ordinal, containerColor = MoodprintColors.Background) {
+            RecordsViewMode.entries.forEach { mode ->
+                Tab(
+                    selected = viewMode == mode,
+                    onClick = { viewModeOrdinal = mode.ordinal },
+                    text = { Text(when (mode) { RecordsViewMode.CARD -> "카드"; RecordsViewMode.CALENDAR -> "캘린더"; RecordsViewMode.MONTHLY -> "월별" }) },
+                    selectedContentColor = MoodprintColors.Primary,
+                    unselectedContentColor = MoodprintColors.SecondaryText,
+                )
+            }
         }
         when (viewMode) {
             RecordsViewMode.CALENDAR -> MoodprintCalendarRecords(
                 logs = logs,
                 state = calendarState,
-                onStateChange = { calendarState = it },
+                onStateChange = {
+                    calendarMonthOffset = it.monthOffset
+                    selectedDateValue = it.selectedDate?.toString()
+                },
                 onRecordDate = { date ->
                     onCheckIn(date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
                 },
-                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                modifier = Modifier.weight(1f).verticalScroll(calendarScrollState),
             )
             RecordsViewMode.MONTHLY -> MoodprintMonthlyRecords(
                 logs = logs,
                 monthOffset = monthlyOffset,
                 onMonthOffsetChange = { monthlyOffset = it },
-                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
+                modifier = Modifier.weight(1f).verticalScroll(monthlyScrollState),
             )
             RecordsViewMode.CARD -> if (logs.isEmpty()) {
                 EmptyRecords(Modifier.weight(1f))
@@ -110,7 +118,7 @@ fun MoodprintRecordsScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Large),
                 ) {
-                    items(logs, key = { it.createdAt }) { log -> MoodprintRecordCard(log) }
+                    items(logs, key = { it.stableKey }) { log -> MoodprintRecordCard(log) }
                 }
             }
         }

@@ -5,6 +5,8 @@ plugins {
 }
 
 android {
+    val releaseApiUrl = providers.gradleProperty("MOODPRINT_API_BASE_URL")
+    val releaseSyncEnabled = releaseApiUrl.isPresent
     namespace = "com.moodprint.app"
     compileSdk = 37
 
@@ -17,7 +19,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
+
+    buildTypes {
+        getByName("debug") {
+            buildConfigField("String", "MOODPRINT_API_BASE_URL", "\"http://10.0.2.2:8080/api/v1\"")
+            buildConfigField("boolean", "MOODPRINT_REMOTE_SYNC_ENABLED", "true")
+        }
+        getByName("release") {
+            // A missing production URL disables networking while retaining the Room outbox.
+            buildConfigField("String", "MOODPRINT_API_BASE_URL", "\"${releaseApiUrl.orNull ?: "https://disabled.invalid/api/v1"}\"")
+            buildConfigField("boolean", "MOODPRINT_REMOTE_SYNC_ENABLED", releaseSyncEnabled.toString())
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -44,6 +58,7 @@ dependencies {
     implementation("androidx.room:room-ktx:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
     implementation("androidx.datastore:datastore-preferences:1.2.1")
+    implementation("androidx.work:work-runtime-ktx:2.11.0")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
