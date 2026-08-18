@@ -68,7 +68,13 @@ struct ActionExecutionView: View {
                             }
                             .moodprintCard(background: MoodprintTheme.mint, padding: 14)
                         }
-                        PetView(size: 100, mood: .calm)
+                        PetView(
+                            size: 100,
+                            mood: .calm,
+                            animal: appState.primaryPet?.animal ?? .cat,
+                            stage: appState.primaryPet?.growthStage ?? 1,
+                            name: appState.primaryPet?.name ?? AnimalKind.cat.koreanName
+                        )
                     }
                     .frame(maxWidth: .infinity)
                     .padding(20)

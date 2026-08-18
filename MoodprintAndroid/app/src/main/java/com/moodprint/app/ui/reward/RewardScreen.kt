@@ -26,7 +26,7 @@ import com.moodprint.app.ui.components.MoodprintPage
 import com.moodprint.app.ui.components.MoodprintPet
 import com.moodprint.app.ui.components.MoodprintStatusTag
 import com.moodprint.app.ui.designsystem.MoodprintColors
-import com.moodprint.app.ui.designsystem.petTintFor
+import com.moodprint.app.domain.AnimalKind
 import com.moodprint.app.ui.model.ActionChangeUi
 
 @Composable
@@ -38,9 +38,9 @@ fun RewardScreen(
     onCollection: () -> Unit,
     modifier: Modifier = Modifier,
     change: ActionChangeUi? = null,
-    petName: String = "몽실이",
+    petName: String = AnimalKind.CAT.koreanName,
     petLevel: Int = 1,
-    petColorName: String = "lavender",
+    petColorName: String = AnimalKind.CAT.storageKey,
     unlockedPetColorName: String? = null,
     didLevelUp: Boolean = false,
 ) = MoodprintPage(modifier) {
@@ -51,7 +51,7 @@ fun RewardScreen(
     ) {
         MoodprintEyebrow("행동 완료")
         Spacer(Modifier.height(18.dp))
-        MoodprintPet(142, happy = true, name = petName, level = petLevel, tint = petTintFor(petColorName))
+        MoodprintPet(142, happy = true, name = petName, level = petLevel, colorName = petColorName)
         Spacer(Modifier.height(14.dp))
         MoodprintStatusTag("✨ 성장 경험치 +$experience", MoodprintColors.Warm)
         Spacer(Modifier.height(14.dp))
@@ -82,7 +82,7 @@ fun RewardScreen(
                         modifier = Modifier.align(Alignment.CenterHorizontally),
                         happy = true,
                         name = unlockedPetName,
-                        tint = petTintFor(unlockedPetColorName ?: "lavender"),
+                        colorName = unlockedPetColorName ?: AnimalKind.CAT.storageKey,
                     )
                 }
                 Text(

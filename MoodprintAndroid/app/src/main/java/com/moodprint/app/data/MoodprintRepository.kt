@@ -83,6 +83,9 @@ interface MoodprintRepository {
         change: MoodChange?,
         detailNote: String?,
     ): ActionCompletion
+
+    /** 해금된 동물을 홈 화면 대표 동반자로 바꾼다. 각 펫의 레벨·경험치는 서로 독립적으로 유지된다. */
+    suspend fun setPrimaryPet(petId: String): Boolean
 }
 
 class RoomMoodprintRepository(
@@ -198,6 +201,8 @@ class RoomMoodprintRepository(
             )
         )
     }
+
+    override suspend fun setPrimaryPet(petId: String): Boolean = petDao.setPrimary(petId)
 
     private companion object {
         const val EXPERIENCE_PER_COMPLETION = 15

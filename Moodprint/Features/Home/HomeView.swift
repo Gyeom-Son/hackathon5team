@@ -11,7 +11,9 @@ struct HomeView: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 4) {
                             Eyebrow("오늘의 동반자")
-                            Text("\(appState.primaryPet?.name ?? "몽실이") · \(appState.primaryPet?.level ?? 1)단계")
+                            // 갓 대표로 설정된 동물은 레벨이 아직 0일 수 있는데, 그대로 쓰면
+                            // "0단계"로 보여 이상해진다. 도감 카드와 같은 최소 1단계 기준으로 맞춘다.
+                            Text("\(appState.primaryPet?.name ?? AnimalKind.cat.koreanName) · \(appState.primaryPet?.growthStage ?? 1)단계")
                                 .font(.headline)
                         }
                         Spacer()
@@ -22,7 +24,13 @@ struct HomeView: View {
                     }
 
                     VStack(spacing: 12) {
-                        PetView(size: 130, mood: .calm)
+                        PetView(
+                            size: 130,
+                            mood: .calm,
+                            animal: appState.primaryPet?.animal ?? .cat,
+                            stage: appState.primaryPet?.growthStage ?? 1,
+                            name: appState.primaryPet?.name ?? AnimalKind.cat.koreanName
+                        )
                         HStack {
                             Text("다음 성장까지")
                             Spacer()

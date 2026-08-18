@@ -85,9 +85,26 @@ data class PetProgressEntity(
     val isPrimary: Boolean
 )
 
+/**
+ * 마음 생물 도감 16종의 고정 UUID. 참고 디자인(`mongsili_animal_growth_stages_2.html`)의
+ * 동물 순서(고양이→강아지→토끼→곰→여우→판다→사자→호랑이→코알라→다람쥐→펭귄→부엉이→양→돼지→사슴→병아리)와
+ * iOS(Moodprint/Core/Seed/SeedCatalog.swift)의 StablePetIDs와 동일한 값입니다.
+ */
 object StablePetIds {
-    const val MONGSIL = "4B0EE180-65EB-4703-89EA-F695DF421101"
-    const val POLJJAK = "4B0EE180-65EB-4703-89EA-F695DF421102"
-    const val KKEUJEOK = "4B0EE180-65EB-4703-89EA-F695DF421103"
-    const val BANJJAK = "4B0EE180-65EB-4703-89EA-F695DF421104"
+    const val CAT = "4B0EE180-65EB-4703-89EA-F695DF421101"
+    const val DOG = "4B0EE180-65EB-4703-89EA-F695DF421102"
+    const val RABBIT = "4B0EE180-65EB-4703-89EA-F695DF421103"
+    const val BEAR = "4B0EE180-65EB-4703-89EA-F695DF421104"
+    const val FOX = "4B0EE180-65EB-4703-89EA-F695DF421105"
+    const val PANDA = "4B0EE180-65EB-4703-89EA-F695DF421106"
+    const val LION = "4B0EE180-65EB-4703-89EA-F695DF421107"
+    const val TIGER = "4B0EE180-65EB-4703-89EA-F695DF421108"
+    const val KOALA = "4B0EE180-65EB-4703-89EA-F695DF421109"
+    const val SQUIRREL = "4B0EE180-65EB-4703-89EA-F695DF421110"
+    const val PENGUIN = "4B0EE180-65EB-4703-89EA-F695DF421111"
+    const val OWL = "4B0EE180-65EB-4703-89EA-F695DF421112"
+    const val SHEEP = "4B0EE180-65EB-4703-89EA-F695DF421113"
+    const val PIG = "4B0EE180-65EB-4703-89EA-F695DF421114"
+    const val DEER = "4B0EE180-65EB-4703-89EA-F695DF421115"
+    const val CHICK = "4B0EE180-65EB-4703-89EA-F695DF421116"
 }

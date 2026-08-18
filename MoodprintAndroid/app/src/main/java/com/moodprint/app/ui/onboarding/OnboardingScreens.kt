@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.moodprint.app.domain.AnimalKind
 import com.moodprint.app.ui.components.MoodprintButton
 import com.moodprint.app.ui.components.MoodprintEyebrow
 import com.moodprint.app.ui.components.MoodprintNavigationBackButton
@@ -75,7 +76,7 @@ fun IntroScreen(
         MoodprintPet(158)
         Spacer(Modifier.height(20.dp))
         Text(
-            "안녕! 나는 몽실이야.",
+            "안녕! 나는 ${AnimalKind.CAT.koreanName}야.",
             Modifier.fillMaxWidth(),
             fontSize = 26.sp,
             fontWeight = FontWeight.Bold,

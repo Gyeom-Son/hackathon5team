@@ -99,7 +99,42 @@ interface PetProgressDao {
     @Query("SELECT * FROM pet_progress WHERE isPrimary = 1 LIMIT 1")
     suspend fun getPrimary(): PetProgressEntity?
 
-    @Query("SELECT * FROM pet_progress WHERE isPrimary = 0 AND isUnlocked = 0 ORDER BY CASE id WHEN '4B0EE180-65EB-4703-89EA-F695DF421102' THEN 1 WHEN '4B0EE180-65EB-4703-89EA-F695DF421103' THEN 2 ELSE 3 END LIMIT 1")
+    @Query("UPDATE pet_progress SET isPrimary = 0 WHERE isPrimary = 1")
+    suspend fun clearPrimary(): Int
+
+    @Query("UPDATE pet_progress SET isPrimary = 1 WHERE id = :petId AND isUnlocked = 1")
+    suspend fun markPrimary(petId: String): Int
+
+    /**
+     * 해금된 동물을 홈 화면 대표 동반자로 바꾼다. 레벨·경험치는 펫마다 독립적으로 저장되어 있으므로
+     * isPrimary 플래그만 옮기면 되고, 각자의 성장치는 그대로 유지된다.
+     */
+    @Transaction
+    suspend fun setPrimary(petId: String): Boolean {
+        val target = getById(petId) ?: return false
+        if (!target.isUnlocked) return false
+        if (target.isPrimary) return true
+        clearPrimary()
+        return markPrimary(petId) == 1
+    }
+
+    @Query("SELECT * FROM pet_progress WHERE isPrimary = 0 AND isUnlocked = 0 ORDER BY CASE id " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421102' THEN 1 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421103' THEN 2 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421104' THEN 3 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421105' THEN 4 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421106' THEN 5 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421107' THEN 6 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421108' THEN 7 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421109' THEN 8 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421110' THEN 9 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421111' THEN 10 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421112' THEN 11 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421113' THEN 12 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421114' THEN 13 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421115' THEN 14 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421116' THEN 15 " +
+        "ELSE 16 END LIMIT 1")
     suspend fun getNextLocked(): PetProgressEntity?
 
     @Query(
@@ -141,7 +176,23 @@ interface CompletionRewardDao {
     @Query("SELECT id FROM pet_progress WHERE isPrimary = 1 LIMIT 1")
     suspend fun getPrimaryPetId(): String?
 
-    @Query("SELECT id FROM pet_progress WHERE isPrimary = 0 AND isUnlocked = 0 ORDER BY CASE id WHEN '4B0EE180-65EB-4703-89EA-F695DF421102' THEN 1 WHEN '4B0EE180-65EB-4703-89EA-F695DF421103' THEN 2 ELSE 3 END LIMIT 1")
+    @Query("SELECT id FROM pet_progress WHERE isPrimary = 0 AND isUnlocked = 0 ORDER BY CASE id " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421102' THEN 1 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421103' THEN 2 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421104' THEN 3 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421105' THEN 4 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421106' THEN 5 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421107' THEN 6 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421108' THEN 7 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421109' THEN 8 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421110' THEN 9 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421111' THEN 10 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421112' THEN 11 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421113' THEN 12 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421114' THEN 13 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421115' THEN 14 " +
+        "WHEN '4B0EE180-65EB-4703-89EA-F695DF421116' THEN 15 " +
+        "ELSE 16 END LIMIT 1")
     suspend fun getNextLockedPetId(): String?
 
     @Query(

@@ -54,7 +54,7 @@ import com.moodprint.app.ui.designsystem.MoodprintColors
 import com.moodprint.app.ui.designsystem.MoodprintPrimaryButton
 import com.moodprint.app.ui.designsystem.MoodprintRadius
 import com.moodprint.app.ui.designsystem.MoodprintSpacing
-import com.moodprint.app.ui.designsystem.petTintFor
+import com.moodprint.app.domain.AnimalKind
 import com.moodprint.app.ui.records.MoodprintRecordsScreen
 
 @Composable
@@ -75,6 +75,7 @@ fun MoodprintMainScreen(
     deleteInProgress: Boolean = false,
     onRetrySync: (() -> Unit)? = null,
     onDeleteAllData: (() -> Unit)? = null,
+    onSetPrimaryPet: ((petId: String) -> Unit)? = null,
 ) {
     var showProfile by remember { mutableStateOf(false) }
     Scaffold(
@@ -120,6 +121,7 @@ fun MoodprintMainScreen(
             MainTab.Collection -> MoodprintCollectionScreen(
                 pets = pets,
                 modifier = Modifier.padding(padding),
+                onSetPrimaryPet = onSetPrimaryPet,
             )
             MainTab.Records -> MoodprintRecordsScreen(
                 logs = logs,
@@ -180,7 +182,10 @@ fun MoodprintHomeContent(
             Column {
                 Text("오늘의 동반자", style = MaterialTheme.typography.labelSmall, color = MoodprintColors.Primary)
                 Text(
-                    "${primaryPet?.name ?: "몽실이"} · ${primaryPet?.level ?: 1}단계",
+                    // 갓 대표로 설정된 동물은 아직 성장치가 0일 수 있는데, 도감 카드에서는
+                    // "1단계"로 표시하면서 여기만 "0단계"로 나와 화면마다 다르게 보이던 문제였다.
+                    // 도감 카드와 같은 규칙(최소 1단계)으로 맞춘다.
+                    "${primaryPet?.name ?: AnimalKind.CAT.koreanName} · ${(primaryPet?.level ?: 1).coerceAtLeast(1)}단계",
                     style = MaterialTheme.typography.titleMedium,
                 )
             }
@@ -201,12 +206,12 @@ fun MoodprintHomeContent(
                 MoodprintPet(
                     size = 92,
                     happy = true,
-                    tint = petTintFor(primaryPet?.colorName ?: "lavender"),
-                    name = primaryPet?.name ?: "몽실이",
+                    colorName = primaryPet?.colorName ?: AnimalKind.CAT.storageKey,
+                    name = primaryPet?.name ?: AnimalKind.CAT.koreanName,
                     level = primaryPet?.level ?: 1,
                 )
                 Surface(color = MoodprintColors.SoftPurple, shape = RoundedCornerShape(MoodprintRadius.Pill)) {
-                    Text("도감 ${pets.count { it.isUnlocked }}/${pets.size.coerceAtLeast(4)}", Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+                    Text("도감 ${pets.count { it.isUnlocked }}/${pets.size.coerceAtLeast(16)}", Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("다음 성장까지", color = MoodprintColors.SecondaryText)

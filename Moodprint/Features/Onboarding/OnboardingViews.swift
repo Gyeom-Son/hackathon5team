@@ -7,7 +7,7 @@ struct WelcomeView: View {
         ScrollView {
             VStack(spacing: 22) {
                 Eyebrow("MOODPRINT")
-                PetView(size: 150, mood: .happy)
+                PetView(size: 150, mood: .happy, animal: PetCatalogSeed.primaryAnimal)
                 Text("나에게 맞는\n작은 회복 행동을 발견해요")
                     .font(.largeTitle.bold())
                     .minimumScaleFactor(0.75)
@@ -36,8 +36,8 @@ struct IntroductionView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                PetView(size: 158, mood: .calm)
-                Text("안녕! 나는 몽실이야.")
+                PetView(size: 158, mood: .calm, animal: PetCatalogSeed.primaryAnimal)
+                Text("안녕! 나는 \(PetCatalogSeed.primaryAnimal.koreanName)야.")
                     .font(.title2.bold())
                 Text("네 마음의 변화를 함께 기록할 동반자야.")
                     .font(.body)

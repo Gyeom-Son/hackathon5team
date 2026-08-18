@@ -46,10 +46,6 @@ object MoodprintColors {
     val Ink = Color(0xFF2E293F)
     val SecondaryText = Color(0xFF6E697D)
     val Border = Color(0xFFD7CFDF)
-    val PetPurple = Color(0xFFC2ADE5)
-    val PetMint = Color(0xFF9ED6C4)
-    val PetCoral = Color(0xFFEBA8A0)
-    val PetYellow = Color(0xFFE6C46B)
 
     val scheme: ColorScheme = lightColorScheme(
         primary = Primary,
@@ -208,11 +204,4 @@ fun MoodprintChoiceGridItem(
             enabled = enabled,
         )
     }
-}
-
-fun petTintFor(colorName: String): Color = when (colorName.lowercase()) {
-    "mint" -> MoodprintColors.PetMint
-    "coral" -> MoodprintColors.PetCoral
-    "yellow" -> MoodprintColors.PetYellow
-    else -> MoodprintColors.PetPurple
 }

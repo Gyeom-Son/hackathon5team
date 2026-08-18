@@ -106,9 +106,22 @@ private object PetSeedCallback : RoomDatabase.Callback() {
 
 }
 
+/** 기본 동반자는 고양이이며, 나머지 15종은 잠금 상태로 시작해 조각을 모으며 도감을 채운다. */
 private fun defaultPetProgress() = listOf(
-    PetProgressEntity(StablePetIds.MONGSIL, "몽실이", "lavender", 1, 0, 3, 3, true, true),
-    PetProgressEntity(StablePetIds.POLJJAK, "폴짝이", "mint", 0, 0, 0, 5, false, false),
-    PetProgressEntity(StablePetIds.KKEUJEOK, "끄적이", "coral", 0, 0, 0, 5, false, false),
-    PetProgressEntity(StablePetIds.BANJJAK, "반짝이", "yellow", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.CAT, "고양이", "cat", 1, 0, 3, 3, true, true),
+    PetProgressEntity(StablePetIds.DOG, "강아지", "dog", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.RABBIT, "토끼", "rabbit", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.BEAR, "곰", "bear", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.FOX, "여우", "fox", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.PANDA, "판다", "panda", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.LION, "사자", "lion", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.TIGER, "호랑이", "tiger", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.KOALA, "코알라", "koala", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.SQUIRREL, "다람쥐", "squirrel", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.PENGUIN, "펭귄", "penguin", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.OWL, "부엉이", "owl", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.SHEEP, "양", "sheep", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.PIG, "돼지", "pig", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.DEER, "사슴", "deer", 0, 0, 0, 5, false, false),
+    PetProgressEntity(StablePetIds.CHICK, "병아리", "chick", 0, 0, 0, 5, false, false),
 )

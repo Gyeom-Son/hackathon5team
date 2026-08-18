@@ -132,6 +132,11 @@ class MoodprintViewModel(
         profileRepository.updateNickname(nickname)
     }
 
+    /** 해금된 동물을 홈 화면 대표 동반자로 바꾼다. 각 펫의 레벨·경험치는 서로 독립적으로 유지된다. */
+    fun setPrimaryPet(petId: String) = viewModelScope.launch {
+        moodprintRepository.setPrimaryPet(petId)
+    }
+
     fun retrySync() {
         if (_syncInProgress.value || _deleteInProgress.value || !syncEnabled) return
         viewModelScope.launch {

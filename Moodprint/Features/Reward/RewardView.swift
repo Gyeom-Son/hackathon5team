@@ -7,13 +7,19 @@ struct RewardView: View {
         ScrollView {
             VStack(spacing: 16) {
                 Eyebrow("행동 완료")
-                PetView(size: 158, mood: .happy)
+                PetView(
+                    size: 158,
+                    mood: .happy,
+                    animal: appState.primaryPet?.animal ?? .cat,
+                    stage: appState.primaryPet?.growthStage ?? 1,
+                    name: appState.primaryPet?.name ?? AnimalKind.cat.koreanName
+                )
                 MoodprintTag(
                     text: "성장 경험치 +\(appState.rewardOutcome?.experienceAwarded ?? 15)",
                     color: MoodprintTheme.warm,
                     systemImage: "sparkles"
                 )
-                Text("몽실이가 조금 성장했어요")
+                Text("\((appState.primaryPet?.name ?? AnimalKind.cat.koreanName).withSubjectParticle) 조금 성장했어요")
                     .font(.title2.bold())
                     .multilineTextAlignment(.center)
                 Text("어떤 변화든 나를 이해하는 중요한 기록이에요.")

@@ -23,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.moodprint.app.domain.ActionCatalog
+import com.moodprint.app.domain.AnimalKind
 import com.moodprint.app.ui.action.ActionExecutionContent
 import com.moodprint.app.ui.checkin.CheckInContent
 import com.moodprint.app.ui.designsystem.MoodprintColors
@@ -99,9 +100,9 @@ fun MoodprintApp(viewModel: MoodprintViewModel = viewModel()) {
     var rewardFragments by rememberSaveable { mutableIntStateOf(0) }
     var unlockedPetName by rememberSaveable { mutableStateOf<String?>(null) }
     var rewardChange by rememberSaveable { mutableStateOf<ActionChangeUi?>(null) }
-    var rewardPetName by rememberSaveable { mutableStateOf("몽실이") }
+    var rewardPetName by rememberSaveable { mutableStateOf(AnimalKind.CAT.koreanName) }
     var rewardPetLevel by rememberSaveable { mutableIntStateOf(1) }
-    var rewardPetColorName by rememberSaveable { mutableStateOf("lavender") }
+    var rewardPetColorName by rememberSaveable { mutableStateOf(AnimalKind.CAT.storageKey) }
     var unlockedPetColorName by rememberSaveable { mutableStateOf<String?>(null) }
     var rewardDidLevelUp by rememberSaveable { mutableStateOf(false) }
     var operationErrorKind by rememberSaveable { mutableStateOf<DataOperationKind?>(null) }
@@ -172,7 +173,8 @@ fun MoodprintApp(viewModel: MoodprintViewModel = viewModel()) {
                     recordDateMillis = date ?: System.currentTimeMillis(); nav.navigate(Screen.CheckIn.name)
                 }, insight = insight, syncEnabled = viewModel.syncEnabled, syncStatusText = syncStatusText,
                     syncInProgress = syncInProgress, deleteInProgress = deleteInProgress,
-                    onRetrySync = viewModel::retrySync, onDeleteAllData = viewModel::deleteAllDataIncludingServer)
+                    onRetrySync = viewModel::retrySync, onDeleteAllData = viewModel::deleteAllDataIncludingServer,
+                    onSetPrimaryPet = viewModel::setPrimaryPet)
             }
             composable(Screen.CheckIn.name) {
                 CheckInContent(emotions, selectedEmotions, note, energy, { nav.popBackStack() }, { emotion ->
