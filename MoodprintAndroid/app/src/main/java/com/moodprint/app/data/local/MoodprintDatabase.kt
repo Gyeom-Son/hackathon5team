@@ -77,11 +77,20 @@ abstract class MoodprintDatabase : RoomDatabase() {
 private object PetSeedCallback : RoomDatabase.Callback() {
     override fun onOpen(db: SupportSQLiteDatabase) {
         super.onOpen(db)
+        syncPetCatalog(db)
         db.execSQL("UPDATE pet_progress SET requiredFragments = 5 WHERE isPrimary = 0 AND isUnlocked = 0 AND requiredFragments < 5")
     }
 
     override fun onCreate(db: SupportSQLiteDatabase) {
         super.onCreate(db)
+        syncPetCatalog(db)
+    }
+
+    /**
+     * 앱 업데이트로 동물 카탈로그가 바뀌어도 기존 성장·해금 상태는 보존한다.
+     * 없는 동물은 추가하고, 기존 행은 표시 이름과 동물 종류만 최신 값으로 맞춘다.
+     */
+    private fun syncPetCatalog(db: SupportSQLiteDatabase) {
         defaultPetProgress().forEach { pet ->
             db.execSQL(
                 """
@@ -101,9 +110,12 @@ private object PetSeedCallback : RoomDatabase.Callback() {
                     if (pet.isPrimary) 1 else 0
                 )
             )
+            db.execSQL(
+                "UPDATE pet_progress SET name = ?, colorName = ? WHERE id = ?",
+                arrayOf<Any>(pet.name, pet.colorName, pet.id)
+            )
         }
     }
-
 }
 
 /** 기본 동반자는 고양이이며, 나머지 15종은 잠금 상태로 시작해 조각을 모으며 도감을 채운다. */
