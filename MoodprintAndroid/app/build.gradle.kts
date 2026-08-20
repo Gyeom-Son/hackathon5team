@@ -5,8 +5,8 @@ plugins {
 }
 
 android {
-    val releaseApiUrl = providers.gradleProperty("MOODPRINT_API_BASE_URL")
-    val releaseSyncEnabled = releaseApiUrl.isPresent
+    val deploymentApiUrl = providers.gradleProperty("MOODPRINT_API_BASE_URL")
+    val releaseSyncEnabled = deploymentApiUrl.isPresent
     namespace = "com.moodprint.app"
     compileSdk = 37
 
@@ -23,12 +23,13 @@ android {
 
     buildTypes {
         getByName("debug") {
-            buildConfigField("String", "MOODPRINT_API_BASE_URL", "\"http://10.0.2.2:8080/api/v1\"")
+            // 기본값은 로컬 서버이며, 팀 배포용 APK는 Gradle 속성으로 실제 서버를 주입한다.
+            buildConfigField("String", "MOODPRINT_API_BASE_URL", "\"${deploymentApiUrl.orNull ?: "http://10.0.2.2:8080/api/v1"}\"")
             buildConfigField("boolean", "MOODPRINT_REMOTE_SYNC_ENABLED", "true")
         }
         getByName("release") {
             // A missing production URL disables networking while retaining the Room outbox.
-            buildConfigField("String", "MOODPRINT_API_BASE_URL", "\"${releaseApiUrl.orNull ?: "https://disabled.invalid/api/v1"}\"")
+            buildConfigField("String", "MOODPRINT_API_BASE_URL", "\"${deploymentApiUrl.orNull ?: "https://disabled.invalid/api/v1"}\"")
             buildConfigField("boolean", "MOODPRINT_REMOTE_SYNC_ENABLED", releaseSyncEnabled.toString())
         }
     }
