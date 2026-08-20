@@ -44,6 +44,7 @@ interface SyncOperationDao {
     @Query("SELECT * FROM sync_operations WHERE status = 'FAILED' ORDER BY sequence") suspend fun failed(): List<SyncOperationEntity>
     @Query("SELECT COUNT(*) FROM sync_operations WHERE status = 'PENDING'") fun observePendingCount(): Flow<Int>
     @Query("SELECT COUNT(*) FROM sync_operations WHERE status = 'FAILED'") fun observeFailedCount(): Flow<Int>
+    @Query("SELECT COUNT(*) FROM sync_operations WHERE status = 'FAILED' AND httpStatus = 401") fun observeUnauthorizedCount(): Flow<Int>
     @Query("UPDATE sync_operations SET status = 'FAILED', httpStatus = :httpStatus WHERE id = :id") suspend fun markFailed(id: String, httpStatus: Int): Int
     @Query("UPDATE sync_operations SET status = 'PENDING', httpStatus = NULL WHERE status = 'FAILED'") suspend fun retryFailed(): Int
     @Query("DELETE FROM sync_operations WHERE id = :id") suspend fun delete(id: String): Int
@@ -87,10 +88,20 @@ interface PetProgressDao {
     suspend fun insertAll(pets: List<PetProgressEntity>)
     @Query("DELETE FROM pet_progress") suspend fun deleteAll()
 
-    @Query("SELECT * FROM pet_progress ORDER BY isPrimary DESC, isUnlocked DESC, name")
+    @Query("SELECT * FROM pet_progress ORDER BY isPrimary DESC, CASE colorName " +
+        "WHEN 'cat' THEN 1 WHEN 'dog' THEN 2 WHEN 'rabbit' THEN 3 WHEN 'bear' THEN 4 " +
+        "WHEN 'fox' THEN 5 WHEN 'panda' THEN 6 WHEN 'lion' THEN 7 WHEN 'tiger' THEN 8 " +
+        "WHEN 'koala' THEN 9 WHEN 'squirrel' THEN 10 WHEN 'penguin' THEN 11 WHEN 'owl' THEN 12 " +
+        "WHEN 'sheep' THEN 13 WHEN 'pig' THEN 14 WHEN 'deer' THEN 15 WHEN 'chick' THEN 16 " +
+        "ELSE 17 END")
     fun observeAll(): Flow<List<PetProgressEntity>>
 
-    @Query("SELECT * FROM pet_progress ORDER BY isPrimary DESC, isUnlocked DESC, name")
+    @Query("SELECT * FROM pet_progress ORDER BY isPrimary DESC, CASE colorName " +
+        "WHEN 'cat' THEN 1 WHEN 'dog' THEN 2 WHEN 'rabbit' THEN 3 WHEN 'bear' THEN 4 " +
+        "WHEN 'fox' THEN 5 WHEN 'panda' THEN 6 WHEN 'lion' THEN 7 WHEN 'tiger' THEN 8 " +
+        "WHEN 'koala' THEN 9 WHEN 'squirrel' THEN 10 WHEN 'penguin' THEN 11 WHEN 'owl' THEN 12 " +
+        "WHEN 'sheep' THEN 13 WHEN 'pig' THEN 14 WHEN 'deer' THEN 15 WHEN 'chick' THEN 16 " +
+        "ELSE 17 END")
     suspend fun getAll(): List<PetProgressEntity>
 
     @Query("SELECT * FROM pet_progress WHERE id = :id LIMIT 1")

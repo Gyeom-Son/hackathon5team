@@ -1,5 +1,7 @@
 # Moodprint Backend
 
+Android MVP는 Room 로컬 데이터를 원본으로 사용하고, 이 서버는 익명 토큰에 연결된 선택적 사본 저장소로 동작합니다. 로그인과 기기 간 복원은 현재 지원하지 않으며, 앱을 재설치하면 기존 서버 사본을 다시 연결할 수 없습니다. 추천 순위는 Android의 로컬 규칙이 데모 기준이며 서버 추천 API는 향후 원격 규칙 전환을 위한 호환 API입니다.
+
 Moodprint iOS/Android MVP용 Spring Boot + Kotlin API입니다. 로그인 대신 서버가 발급한 opaque 익명 토큰을 사용하며, 서버는 SHA-256 hash만 저장합니다.
 
 ## 실행

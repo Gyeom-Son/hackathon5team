@@ -72,8 +72,10 @@ fun MoodprintMainScreen(
     syncEnabled: Boolean = false,
     syncStatusText: String = if (syncEnabled) "서버 동기화 사용 중" else "이 기기에 저장 중",
     syncInProgress: Boolean = false,
+    syncRequiresReconnect: Boolean = false,
     deleteInProgress: Boolean = false,
     onRetrySync: (() -> Unit)? = null,
+    onReconnectSync: (() -> Unit)? = null,
     onDeleteAllData: (() -> Unit)? = null,
     onSetPrimaryPet: ((petId: String) -> Unit)? = null,
 ) {
@@ -138,8 +140,10 @@ fun MoodprintMainScreen(
             syncEnabled = syncEnabled,
             syncStatusText = syncStatusText,
             syncInProgress = syncInProgress,
+            syncRequiresReconnect = syncRequiresReconnect,
             deleteInProgress = deleteInProgress,
             onRetrySync = onRetrySync,
+            onReconnectSync = onReconnectSync,
             onDeleteAllData = onDeleteAllData,
         )
     }
@@ -240,7 +244,7 @@ private fun GentleDiscoveryCard(pets: List<PetProgressEntity>) {
     Surface(Modifier.fillMaxWidth(), color = MoodprintColors.Mint, shape = RoundedCornerShape(MoodprintRadius.Card)) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Small)) {
             Text("천천히 발견해요", style = MaterialTheme.typography.labelSmall, color = MoodprintColors.Primary, fontWeight = FontWeight.Bold)
-            Text(next?.let { "${it.name}의 조각 ${it.fragments}/${it.requiredFragments} · 행동을 완료할 때 한 조각씩 만날 수 있어요." }
+            Text(next?.let { "${it.name} 만나기 ${it.fragments}/${it.requiredFragments} · 행동을 완료할 때 한 걸음씩 가까워져요." }
                 ?: "모든 마음 생물을 만났어요. 기록하지 않는 날에도 불이익은 없어요.")
         }
     }
@@ -254,8 +258,10 @@ fun MoodprintProfileDialog(
     syncEnabled: Boolean = false,
     syncStatusText: String = if (syncEnabled) "서버 동기화 사용 중" else "이 기기에 저장 중",
     syncInProgress: Boolean = false,
+    syncRequiresReconnect: Boolean = false,
     deleteInProgress: Boolean = false,
     onRetrySync: (() -> Unit)? = null,
+    onReconnectSync: (() -> Unit)? = null,
     onDeleteAllData: (() -> Unit)? = null,
 ) {
     var value by remember(currentNickname) { mutableStateOf(currentNickname) }
@@ -284,6 +290,15 @@ fun MoodprintProfileDialog(
                 if (syncEnabled && onRetrySync != null) {
                     TextButton(onClick = onRetrySync, enabled = !syncInProgress && !deleteInProgress) {
                         Text(if (syncInProgress) "동기화 중…" else "지금 동기화 다시 시도")
+                    }
+                }
+                if (syncEnabled && syncRequiresReconnect && onReconnectSync != null) {
+                    Text(
+                        "이전 익명 연결은 만료되었어요. 새 연결을 시작해도 이 기기의 기록은 지워지지 않지만, 이전 서버 사본에는 다시 접근할 수 없어요.",
+                        color = MoodprintColors.SecondaryText,
+                    )
+                    TextButton(onClick = onReconnectSync, enabled = !syncInProgress && !deleteInProgress) {
+                        Text("새 익명 서버 연결 시작")
                     }
                 }
                 if (onDeleteAllData != null) {

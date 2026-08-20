@@ -85,6 +85,7 @@ fun MoodprintApp(viewModel: MoodprintViewModel = viewModel()) {
     val saveState by viewModel.saveMoodState.collectAsStateWithLifecycle()
     val finishState by viewModel.finishActionState.collectAsStateWithLifecycle()
     val syncStatusText by viewModel.syncStatusText.collectAsStateWithLifecycle()
+    val syncRequiresReconnect by viewModel.syncRequiresReconnect.collectAsStateWithLifecycle()
     val syncInProgress by viewModel.syncInProgress.collectAsStateWithLifecycle()
     val deleteInProgress by viewModel.deleteInProgress.collectAsStateWithLifecycle()
     val dataManagementMessage by viewModel.dataManagementMessage.collectAsStateWithLifecycle()
@@ -172,8 +173,8 @@ fun MoodprintApp(viewModel: MoodprintViewModel = viewModel()) {
                     viewModel.beginNewMood(); selectedEmotions = emptyList(); note = ""; energy = "보통"
                     recordDateMillis = date ?: System.currentTimeMillis(); nav.navigate(Screen.CheckIn.name)
                 }, insight = insight, syncEnabled = viewModel.syncEnabled, syncStatusText = syncStatusText,
-                    syncInProgress = syncInProgress, deleteInProgress = deleteInProgress,
-                    onRetrySync = viewModel::retrySync, onDeleteAllData = viewModel::deleteAllDataIncludingServer,
+                    syncInProgress = syncInProgress, syncRequiresReconnect = syncRequiresReconnect, deleteInProgress = deleteInProgress,
+                    onRetrySync = viewModel::retrySync, onReconnectSync = viewModel::reconnectSync, onDeleteAllData = viewModel::deleteAllDataIncludingServer,
                     onSetPrimaryPet = viewModel::setPrimaryPet)
             }
             composable(Screen.CheckIn.name) {

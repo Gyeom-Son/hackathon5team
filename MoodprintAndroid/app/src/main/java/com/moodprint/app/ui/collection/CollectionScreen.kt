@@ -30,7 +30,6 @@ import com.moodprint.app.ui.designsystem.MoodprintColors
 import com.moodprint.app.ui.designsystem.MoodprintRadius
 import com.moodprint.app.ui.designsystem.MoodprintSpacing
 import com.moodprint.app.ui.components.MoodprintPet
-import com.moodprint.app.ui.debug.AnimalGalleryDialog
 
 @Composable
 fun MoodprintCollectionScreen(
@@ -40,10 +39,6 @@ fun MoodprintCollectionScreen(
 ) {
     val useSingleColumn = LocalDensity.current.fontScale >= 1.3f
     var selectedPet by remember { mutableStateOf<PetProgressEntity?>(null) }
-    // 16종 전체 성장 단계를 한 번에 볼 수 있다. 확인이 끝나면 이 상태, 아래
-    // showAnimalGallery 관련 TextButton/다이얼로그 블록, 그리고 ui/debug/AnimalGalleryScreen.kt
-    // 파일을 지우면 깔끔하게 제거할 수 있다.
-    var showAnimalGallery by remember { mutableStateOf(false) }
     Column(
         modifier = modifier.fillMaxSize().padding(MoodprintSpacing.XLarge),
         verticalArrangement = Arrangement.spacedBy(MoodprintSpacing.Large),
@@ -55,22 +50,7 @@ fun MoodprintCollectionScreen(
         ) {
             Column {
                 Text("마음 생물 도감", style = MaterialTheme.typography.labelSmall, color = MoodprintColors.Primary)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("발견한 친구들", style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    // 진입점 (제거 가능, 아래 showAnimalGallery 선언부 주석 참고).
-                    Surface(
-                        onClick = { showAnimalGallery = true },
-                        color = MoodprintColors.SoftPurple,
-                        shape = RoundedCornerShape(6.dp),
-                    ) {
-                        Text(
-                            "전체 캐릭터 보기",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MoodprintColors.Primary,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        )
-                    }
-                }
+                Text("발견한 친구들", style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Surface(color = MoodprintColors.SoftPurple, shape = RoundedCornerShape(MoodprintRadius.Pill)) {
                 Text("${pets.count { it.isUnlocked }} / ${pets.size.coerceAtLeast(16)}", Modifier.padding(horizontal = 12.dp, vertical = 7.dp))
@@ -108,10 +88,6 @@ fun MoodprintCollectionScreen(
                 Text("기록하지 않은 날에도 불이익은 없어요. 작은 행동을 완료할 때 새로운 친구를 만날 수 있어요.")
             }
         }
-    }
-
-    if (showAnimalGallery) {
-        AnimalGalleryDialog(onDismiss = { showAnimalGallery = false })
     }
 
     val pet = selectedPet

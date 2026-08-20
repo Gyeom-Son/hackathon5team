@@ -28,12 +28,18 @@ class SessionService(private val users: AnonymousUserRepository, private val pet
         pets.saveAll(defaultPets(user))
         return AnonymousSessionResponse(token)
     }
-    private fun defaultPets(owner: AnonymousUser) = listOf(
-        PetProgressEntity(owner = owner, petKey = "MONGSIL", name = "몽실이", level = 1, fragments = 3, requiredFragments = 3, unlocked = true, primaryPet = true),
-        PetProgressEntity(owner = owner, petKey = "POLJJAK", name = "폴짝이"),
-        PetProgressEntity(owner = owner, petKey = "KKEUJEOK", name = "끄적이"),
-        PetProgressEntity(owner = owner, petKey = "BANJJAK", name = "반짝이"),
-    )
+    private fun defaultPets(owner: AnonymousUser) = PetCatalog.entries.mapIndexed { index, seed ->
+        PetProgressEntity(
+            owner = owner,
+            petKey = seed.key,
+            name = seed.name,
+            level = if (index == 0) 1 else 0,
+            fragments = if (index == 0) 3 else 0,
+            requiredFragments = if (index == 0) 3 else 5,
+            unlocked = index == 0,
+            primaryPet = index == 0,
+        )
+    }
 }
 
 @Service
@@ -126,7 +132,7 @@ class CompletionService(
         val result = results.save(ActionResultEntity(owner = owner, sessionId = request.sessionId, mood = mood, actionId = request.actionId, change = request.change, detailNote = request.detailNote?.trim()?.ifBlank { null }))
         val primary = pets.findByOwnerIdAndPrimaryPetTrue(owner.id) ?: throw IllegalStateException("기본 펫이 없어요.")
         primary.experience += 15; primary.level = primary.experience / 100 + 1
-        val collection = pets.findNextLocked(owner.id).firstOrNull()
+        val collection = PetCatalog.nextLocked(pets.findAllByOwnerId(owner.id))
         val fragments = if (collection == null) 0 else 1
         collection?.let { it.fragments = minOf(it.requiredFragments, it.fragments + 1); if (it.fragments >= it.requiredFragments) it.unlocked = true }
         rewards.save(RewardEntity(result = result, experience = 15, fragments = fragments))
@@ -134,7 +140,7 @@ class CompletionService(
     }
     private fun response(result: ActionResultEntity, already: Boolean): CompletionResponse {
         val reward = rewards.findByResultId(result.id) ?: throw IllegalStateException("보상을 찾을 수 없어요.")
-        return CompletionResponse(result.id, result.sessionId, RewardResponse(reward.experience, reward.fragments, already), pets.findAllByOwnerIdOrderByPrimaryPetDescNameAsc(result.owner.id).map { it.response() })
+        return CompletionResponse(result.id, result.sessionId, RewardResponse(reward.experience, reward.fragments, already), PetCatalog.sorted(pets.findAllByOwnerId(result.owner.id)).map { it.response() })
     }
 }
 

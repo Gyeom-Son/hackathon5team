@@ -48,6 +48,31 @@ class MoodprintApiIntegrationTest @Autowired constructor(
     }
 
     @Test
+    fun `collection rewards follow the same canonical order shown by the app`() {
+        val token = token()
+        repeat(6) {
+            val moodId = UUID.randomUUID()
+            mvc.post("/api/v1/moods") {
+                header("Authorization", "Bearer $token"); contentType = MediaType.APPLICATION_JSON
+                content = """{"clientMoodId":"$moodId","emotions":["ANXIOUS"],"energy":"LOW","recordedDate":"${LocalDate.now()}"}"""
+            }.andExpect { status { isOk() } }
+            mvc.post("/api/v1/action-completions") {
+                header("Authorization", "Bearer $token"); contentType = MediaType.APPLICATION_JSON
+                content = """{"sessionId":"${UUID.randomUUID()}","moodId":"$moodId","actionId":"17E3A608-17F8-4BEA-94B3-370DFBF82D01"}"""
+            }.andExpect { status { isOk() } }
+        }
+        mvc.get("/api/v1/pets") { header("Authorization", "Bearer $token") }.andExpect {
+            status { isOk() }
+            jsonPath("$[1].petKey") { value("dog") }
+            jsonPath("$[1].unlocked") { value(true) }
+            jsonPath("$[1].fragments") { value(5) }
+            jsonPath("$[2].petKey") { value("rabbit") }
+            jsonPath("$[2].unlocked") { value(false) }
+            jsonPath("$[2].fragments") { value(1) }
+        }
+    }
+
+    @Test
     fun `owner isolation validation catalog recommendation pets and monthly records work`() {
         val owner = token()
         val other = token()
@@ -60,7 +85,14 @@ class MoodprintApiIntegrationTest @Autowired constructor(
             header("Authorization", "Bearer $owner"); contentType = MediaType.APPLICATION_JSON
             content = """{"emotions":["UPSET","LONELY"],"energy":"LOW"}"""
         }.andExpect { status { isOk() }; jsonPath("$[0].reason", not(containsString("비슷한 기록"))) }
-        mvc.get("/api/v1/pets") { header("Authorization", "Bearer $owner") }.andExpect { status { isOk() }; jsonPath("$", hasSize<Any>(4)) }
+        mvc.get("/api/v1/pets") { header("Authorization", "Bearer $owner") }.andExpect {
+            status { isOk() }
+            jsonPath("$", hasSize<Any>(16))
+            jsonPath("$[0].petKey") { value("cat") }
+            jsonPath("$[1].petKey") { value("dog") }
+            jsonPath("$[2].petKey") { value("rabbit") }
+            jsonPath("$[15].petKey") { value("chick") }
+        }
         mvc.get("/api/v1/records/monthly") { header("Authorization", "Bearer $owner"); param("year", LocalDate.now().year.toString()); param("month", LocalDate.now().monthValue.toString()) }
             .andExpect { status { isOk() }; jsonPath("$.stats.checkInCount") { value(1) }; jsonPath("$.records[0].note") { value("오늘 기록") } }
     }

@@ -32,12 +32,7 @@ interface RewardRepository : JpaRepository<RewardEntity, UUID> {
 }
 interface PetRepository : JpaRepository<PetProgressEntity, UUID> {
     fun findAllByOwnerIdOrderByPrimaryPetDescNameAsc(ownerId: UUID): List<PetProgressEntity>
+    fun findAllByOwnerId(ownerId: UUID): List<PetProgressEntity>
     fun findByOwnerIdAndPrimaryPetTrue(ownerId: UUID): PetProgressEntity?
     fun deleteAllByOwnerId(ownerId: UUID)
-    @Query("""
-        select p from PetProgressEntity p
-        where p.owner.id=:ownerId and p.primaryPet=false and p.unlocked=false
-        order by case p.petKey when 'POLJJAK' then 1 when 'KKEUJEOK' then 2 else 3 end
-    """)
-    fun findNextLocked(ownerId: UUID): List<PetProgressEntity>
 }

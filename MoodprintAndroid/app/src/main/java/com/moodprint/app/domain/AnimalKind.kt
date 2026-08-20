@@ -7,22 +7,22 @@ import androidx.compose.ui.graphics.Color
  * [com.moodprint.app.data.local.PetProgressEntity.colorName]에는 [storageKey]가 저장됩니다.
  */
 enum class AnimalKind(val storageKey: String, val koreanName: String, val bodyColor: Color) {
-    CAT("cat", "고양이", Color(0xFFF0B98C)),
-    DOG("dog", "강아지", Color(0xFFE0C49A)),
-    RABBIT("rabbit", "토끼", Color(0xFFF6DDE7)),
-    BEAR("bear", "곰", Color(0xFFC9A27A)),
-    FOX("fox", "여우", Color(0xFFF0935A)),
-    PANDA("panda", "판다", Color(0xFFF5F5F5)),
-    LION("lion", "사자", Color(0xFFE8A33D)),
-    TIGER("tiger", "호랑이", Color(0xFFF0A24A)),
-    KOALA("koala", "코알라", Color(0xFFB9B6C4)),
-    SQUIRREL("squirrel", "다람쥐", Color(0xFFC98A52)),
-    PENGUIN("penguin", "펭귄", Color(0xFF3A3A44)),
-    OWL("owl", "부엉이", Color(0xFFA98A5C)),
-    SHEEP("sheep", "양", Color(0xFFEFE9DA)),
-    PIG("pig", "돼지", Color(0xFFF4B8C6)),
-    DEER("deer", "사슴", Color(0xFFD3A878)),
-    CHICK("chick", "병아리", Color(0xFFF6D548));
+    CAT("cat", "고양이", Color(0xFFE9B684)),
+    DOG("dog", "강아지", Color(0xFFD8BD91)),
+    RABBIT("rabbit", "토끼", Color(0xFFEBCFD9)),
+    BEAR("bear", "곰", Color(0xFFB9936C)),
+    FOX("fox", "여우", Color(0xFFDE8954)),
+    PANDA("panda", "판다", Color(0xFFEDEBE7)),
+    LION("lion", "사자", Color(0xFFD89A45)),
+    TIGER("tiger", "호랑이", Color(0xFFE69A4D)),
+    KOALA("koala", "코알라", Color(0xFFA9A8B0)),
+    SQUIRREL("squirrel", "다람쥐", Color(0xFFB77C4D)),
+    PENGUIN("penguin", "펭귄", Color(0xFF45434A)),
+    OWL("owl", "부엉이", Color(0xFF9B805D)),
+    SHEEP("sheep", "양", Color(0xFFE8E1D2)),
+    PIG("pig", "돼지", Color(0xFFE8AEBB)),
+    DEER("deer", "사슴", Color(0xFFC49A70)),
+    CHICK("chick", "병아리", Color(0xFFE8C84C));
 
     companion object {
         /** [colorName]에 저장된 값을 캐릭터 종류로 변환한다. 알 수 없는 값이면 고양이로 대체한다. */

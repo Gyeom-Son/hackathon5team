@@ -18,7 +18,7 @@ sealed interface SyncStatus {
     data object Synced : SyncStatus
     data object Deleting : SyncStatus
     data class Pending(val count: Int) : SyncStatus
-    data class Failed(val pendingCount: Int, val failedCount: Int) : SyncStatus
+    data class Failed(val pendingCount: Int, val failedCount: Int, val requiresReconnect: Boolean) : SyncStatus
 }
 
 /** Room-backed ordered outbox. */
@@ -28,11 +28,13 @@ class RemoteSyncService(
     private val api: MoodprintRemoteApi = MoodprintApiClient(),
 ) {
     private val outbox get() = database.syncOperationDao()
-    val status: Flow<SyncStatus> = combine(outbox.observePendingCount(), outbox.observeFailedCount(), sessionStore.deletionRequested) { pending, failed, deleting ->
+    val status: Flow<SyncStatus> = combine(
+        outbox.observePendingCount(), outbox.observeFailedCount(), outbox.observeUnauthorizedCount(), sessionStore.deletionRequested,
+    ) { pending, failed, unauthorized, deleting ->
         when {
             !BuildConfig.MOODPRINT_REMOTE_SYNC_ENABLED -> SyncStatus.Disabled
             deleting -> SyncStatus.Deleting
-            failed > 0 -> SyncStatus.Failed(pending, failed)
+            failed > 0 -> SyncStatus.Failed(pending, failed, unauthorized > 0)
             pending > 0 -> SyncStatus.Pending(pending)
             else -> SyncStatus.Synced
         }
@@ -56,6 +58,14 @@ class RemoteSyncService(
 
     suspend fun retryFailedAndPending(): Result<Unit> = withContext(Dispatchers.IO) { processMutex.withLock {
         if (sessionStore.isDeletionRequested()) return@withLock Result.failure(IllegalStateException("삭제 처리 중이에요."))
+        outbox.retryFailed()
+        drain()
+    } }
+
+    /** 사용자가 선택했을 때만 만료된 익명 서버 연결을 새 연결로 바꾼다. 로컬 기록은 그대로 유지한다. */
+    suspend fun reconnectAsNewAnonymousIdentity(): Result<Unit> = withContext(Dispatchers.IO) { processMutex.withLock {
+        if (sessionStore.isDeletionRequested()) return@withLock Result.failure(IllegalStateException("삭제 처리 중이에요."))
+        sessionStore.clearToken()
         outbox.retryFailed()
         drain()
     } }
@@ -111,7 +121,10 @@ class RemoteSyncService(
                 when {
                     // Never create a replacement anonymous identity automatically. Doing so
                     // would leave the old identity and its private records unreachable.
-                    error.status == 401 -> throw error
+                    error.status == 401 -> {
+                        check(outbox.markFailed(operation.id, error.status) == 1)
+                        throw error
+                    }
                     error.status == 409 ->
                         check(outbox.markFailed(operation.id, error.status) == 1)
                     error.status in 400..499 && error.status != 429 ->

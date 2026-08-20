@@ -1,6 +1,7 @@
 package com.moodprint.app.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,20 +35,20 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.moodprint.app.R
 import com.moodprint.app.domain.AnimalKind
 import com.moodprint.app.domain.growthStageFor
 import com.moodprint.app.ui.designsystem.MoodprintColors
 import com.moodprint.app.ui.designsystem.MoodprintPrimaryButton
 import com.moodprint.app.ui.designsystem.MoodprintRadius
 import com.moodprint.app.ui.designsystem.MoodprintSpacing
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sin
 
 @Composable
 fun MoodprintPage(
@@ -130,17 +131,35 @@ fun MoodprintPet(
 ) {
     val animal = AnimalKind.fromStorageKey(colorName)
     val stage = growthStageFor(level)
+    val description = when {
+        !unlocked -> "아직 만나지 못한 마음 생물"
+        happy -> "기쁜 표정의 마음 동반자 $name, 성장 ${level.coerceAtLeast(1)}단계"
+        else -> "편안한 표정의 마음 동반자 $name, 성장 ${level.coerceAtLeast(1)}단계"
+    }
+
+    if (unlocked) {
+        val growthScale = when (stage) { 1 -> .70f; 2 -> .90f; else -> 1f }
+        Box(
+            modifier = modifier
+                .size(size.dp)
+                .semantics { contentDescription = description },
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            Image(
+                painter = painterResource(animal.mascotDrawable(stage)),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(growthScale),
+                contentScale = ContentScale.Fit,
+            )
+        }
+        return
+    }
+
     Canvas(
         modifier
             .size(size.dp)
             .alpha(if (unlocked) 1f else .38f)
-            .semantics {
-                contentDescription = when {
-                    !unlocked -> "아직 만나지 못한 마음 생물"
-                    happy -> "기쁜 표정의 마음 동반자 $name, 성장 ${level.coerceAtLeast(1)}단계"
-                    else -> "편안한 표정의 마음 동반자 $name, 성장 ${level.coerceAtLeast(1)}단계"
-                }
-            },
+            .semantics { contentDescription = description },
     ) {
         val width = this.size.width
         val height = this.size.height
@@ -148,16 +167,12 @@ fun MoodprintPet(
         val bodyScale = when (stage) { 1 -> .62f; 2 -> .84f; else -> 1f }
         val featureScale = when (stage) { 1 -> .78f; 2 -> .89f; else -> 1f }
         val faceScale = when (stage) { 1 -> 1.1f; 2 -> 1.04f; else -> 1f }
-        // 몸통 하단 중앙 — 몸통을 더 둥글게 늘리면서 바닥선이 .96 지점으로 내려간 것에 맞췄다.
-        val bottomPivot = Offset(width / 2f, height * .96f)
+        // 시안의 낮고 넓은 찹쌀떡 체형은 바닥에 붙은 축을 기준으로 성장시킨다.
+        val bottomPivot = Offset(width / 2f, height * .92f)
         // 참고 HTML의 transform-origin: 50% 12% (몸통 상단 쪽 장식 기준점).
         val featurePivot = Offset(width / 2f, height * .24f)
 
-        drawOval(
-            Color(0x1F5A3C64),
-            Offset(width * .21f, height * .96f),
-            Size(width * .58f, height * .05f),
-        )
+        drawOval(Color(0x12514955), Offset(width * .27f, height * .91f), Size(width * .46f, height * .035f))
 
         // 갈기·꼬리처럼 몸통 뒤에 깔리는 장식 — 몸통 실루엣 바깥으로 나오는 부분만 보인다.
         scale(bodyScale, pivot = bottomPivot) {
@@ -173,6 +188,11 @@ fun MoodprintPet(
         // 몸통 — 위쪽 약 15%는 비워 두어 귀가 들어갈 자리를 만든다.
         scale(bodyScale, pivot = bottomPivot) {
             drawPath(blobPath(width, height), bodyTint)
+            drawPath(
+                blobPath(width, height),
+                mascotInk.copy(alpha = .78f),
+                style = Stroke(width = width * .011f),
+            )
         }
 
         if (!unlocked) return@Canvas
@@ -180,12 +200,10 @@ fun MoodprintPet(
         // 귀·수염·줄무늬 등 몸통 앞 장식 + 얼굴.
         scale(bodyScale, pivot = bottomPivot) {
             scale(featureScale, pivot = featurePivot) {
-                // 반짝임을 귀보다 먼저(아래에) 그려서, 귀와 겹치는 자리에서는 귀 뒤로 자연스럽게
-                // 가려지게 한다 (이전에는 맨 위에 그려서 귀를 가로지르는 것처럼 보였다).
-                if (stage == 3) drawSparkle(width, height)
                 drawEars(animal, width, height, bodyTint.darker(.1f))
                 when (animal) {
                     AnimalKind.CAT -> drawWhiskers(width, height)
+                    AnimalKind.DOG -> drawDogMuzzle(width, height)
                     AnimalKind.TIGER -> {
                         drawStripes(width, height)
                         drawMuzzlePatch(width, height)
@@ -193,8 +211,15 @@ fun MoodprintPet(
                     AnimalKind.FOX -> drawMuzzlePatch(width, height)
                     AnimalKind.BEAR -> drawBearMuzzle(width, height)
                     AnimalKind.PANDA -> drawEyePatches(width, height)
-                    AnimalKind.SHEEP -> drawWool(width, height)
-                    AnimalKind.DEER -> drawAntlers(width, height)
+                    AnimalKind.OWL -> drawOwlFaceDisc(width, height)
+                    AnimalKind.SHEEP -> {
+                        drawSheepFacePatch(width, height)
+                        drawWool(width, height)
+                    }
+                    AnimalKind.DEER -> {
+                        drawAntlers(width, height)
+                        drawDeerSpots(width, height)
+                    }
                     AnimalKind.SQUIRREL -> drawCheekPuffs(width, height)
                     else -> Unit
                 }
@@ -206,13 +231,38 @@ fun MoodprintPet(
             }
             scale(faceScale, pivot = Offset(width / 2f, height * .5f)) {
                 drawFace(animal, width, height, happy)
+                if (stage >= 2) drawBlush(width, height)
             }
+            drawBeanPaws(width, height, bodyTint, animal)
         }
     }
 }
 
+private val mascotGrowthResources = mapOf(
+    AnimalKind.CAT to intArrayOf(R.drawable.mascot_cat_stage1, R.drawable.mascot_cat_stage2, R.drawable.mascot_cat_stage3),
+    AnimalKind.DOG to intArrayOf(R.drawable.mascot_dog_stage1, R.drawable.mascot_dog_stage2, R.drawable.mascot_dog_stage3),
+    AnimalKind.RABBIT to intArrayOf(R.drawable.mascot_rabbit_stage1, R.drawable.mascot_rabbit_stage2, R.drawable.mascot_rabbit_stage3),
+    AnimalKind.BEAR to intArrayOf(R.drawable.mascot_bear_stage1, R.drawable.mascot_bear_stage2, R.drawable.mascot_bear_stage3),
+    AnimalKind.FOX to intArrayOf(R.drawable.mascot_fox_stage1, R.drawable.mascot_fox_stage2, R.drawable.mascot_fox_stage3),
+    AnimalKind.PANDA to intArrayOf(R.drawable.mascot_panda_stage1, R.drawable.mascot_panda_stage2, R.drawable.mascot_panda_stage3),
+    AnimalKind.LION to intArrayOf(R.drawable.mascot_lion_stage1, R.drawable.mascot_lion_stage2, R.drawable.mascot_lion_stage3),
+    AnimalKind.TIGER to intArrayOf(R.drawable.mascot_tiger_stage1, R.drawable.mascot_tiger_stage2, R.drawable.mascot_tiger_stage3),
+    AnimalKind.KOALA to intArrayOf(R.drawable.mascot_koala_stage1, R.drawable.mascot_koala_stage2, R.drawable.mascot_koala_stage3),
+    AnimalKind.SQUIRREL to intArrayOf(R.drawable.mascot_squirrel_stage1, R.drawable.mascot_squirrel_stage2, R.drawable.mascot_squirrel_stage3),
+    AnimalKind.PENGUIN to intArrayOf(R.drawable.mascot_penguin_stage1, R.drawable.mascot_penguin_stage2, R.drawable.mascot_penguin_stage3),
+    AnimalKind.OWL to intArrayOf(R.drawable.mascot_owl_stage1, R.drawable.mascot_owl_stage2, R.drawable.mascot_owl_stage3),
+    AnimalKind.SHEEP to intArrayOf(R.drawable.mascot_sheep_stage1, R.drawable.mascot_sheep_stage2, R.drawable.mascot_sheep_stage3),
+    AnimalKind.PIG to intArrayOf(R.drawable.mascot_pig_stage1, R.drawable.mascot_pig_stage2, R.drawable.mascot_pig_stage3),
+    AnimalKind.DEER to intArrayOf(R.drawable.mascot_deer_stage1, R.drawable.mascot_deer_stage2, R.drawable.mascot_deer_stage3),
+    AnimalKind.CHICK to intArrayOf(R.drawable.mascot_chick_stage1, R.drawable.mascot_chick_stage2, R.drawable.mascot_chick_stage3),
+)
+
+private fun AnimalKind.mascotDrawable(stage: Int): Int =
+    mascotGrowthResources.getValue(this)[growthStageFor(stage) - 1]
+
 private val behindTailAnimals = listOf(AnimalKind.CAT, AnimalKind.DOG, AnimalKind.FOX, AnimalKind.LION, AnimalKind.PIG)
 private val wingedAnimals = listOf(AnimalKind.PENGUIN, AnimalKind.OWL, AnimalKind.CHICK)
+private val mascotInk = Color(0xFF514955)
 
 private fun tailColor(animal: AnimalKind, bodyTint: Color): Color =
     if (animal == AnimalKind.FOX) Color.White.copy(alpha = .9f) else bodyTint.darker(.1f)
@@ -222,11 +272,11 @@ private fun tailColor(animal: AnimalKind, bodyTint: Color): Color =
  * 이전 버전을 세로로 늘려(.86) 원에 가깝게 만들었다 — 귀가 들어갈 위쪽 여백은 그대로 남긴다.
  */
 private fun blobPath(width: Float, height: Float): Path = Path().apply {
-    moveTo(width * .50f, height * .132f)
-    cubicTo(width * .79f, height * .100f, width * .96f, height * .293f, width * .94f, height * .562f)
-    cubicTo(width * .96f, height * .842f, width * .78f, height * .960f, width * .50f, height * .939f)
-    cubicTo(width * .23f, height * .960f, width * .04f, height * .842f, width * .06f, height * .562f)
-    cubicTo(width * .04f, height * .293f, width * .21f, height * .100f, width * .50f, height * .132f)
+    moveTo(width * .50f, height * .19f)
+    cubicTo(width * .78f, height * .155f, width * .95f, height * .31f, width * .94f, height * .57f)
+    cubicTo(width * .95f, height * .81f, width * .78f, height * .925f, width * .50f, height * .91f)
+    cubicTo(width * .22f, height * .925f, width * .05f, height * .81f, width * .06f, height * .57f)
+    cubicTo(width * .05f, height * .31f, width * .22f, height * .155f, width * .50f, height * .19f)
     close()
 }
 
@@ -251,19 +301,16 @@ private fun DrawScope.drawEars(animal: AnimalKind, width: Float, height: Float, 
             }
         }
         AnimalKind.DOG -> {
-            // 자연스러운 처진 귀: 곧은 알약 모양 대신 통통한 타원으로 정수리 옆에 붙여
-            // 뺨 옆으로 늘어지게 하고, 안쪽에 옅은 분홍을 더해 귀처럼 보이게 한다.
-            // 중심에서 .40만큼 벌어져 있으면 몸통 실루엣 밖으로 반쯤 튀어나가 붕 떠 보인다
-            // (심지어 프레임 밖으로도 잘렸다) — 중심으로 더 당기고 위로 올려 머리에 붙게 한다.
+            // 토끼처럼 솟아 보이지 않도록 짧고 넓은 타원을 머리 양옆에서 바깥으로 눕힌다.
             listOf(-1f, 1f).forEach { sign ->
-                val cx = width * .5f + sign * width * .32f
-                val cy = height * .24f
-                rotate(sign * 14f, pivot = Offset(cx, cy)) {
-                    drawOval(color, topLeft = Offset(cx - width * .13f, cy - height * .21f), size = Size(width * .26f, height * .42f))
+                val cx = width * .5f + sign * width * .30f
+                val cy = height * .25f
+                rotate(sign * 32f, pivot = Offset(cx, cy)) {
+                    drawOval(color, topLeft = Offset(cx - width * .15f, cy - height * .12f), size = Size(width * .30f, height * .24f))
                     drawOval(
                         Color(0xFFFFD7E0).copy(alpha = .55f),
-                        topLeft = Offset(cx - width * .07f, cy - height * .01f),
-                        size = Size(width * .14f, height * .22f),
+                        topLeft = Offset(cx - width * .08f, cy - height * .055f),
+                        size = Size(width * .16f, height * .11f),
                     )
                 }
             }
@@ -420,6 +467,24 @@ private fun DrawScope.drawBearMuzzle(width: Float, height: Float) {
     )
 }
 
+/** 강아지는 얼굴 중앙의 크림색 주둥이와 처진 귀만으로 알아볼 수 있게 단순화한다. */
+private fun DrawScope.drawDogMuzzle(width: Float, height: Float) {
+    drawOval(
+        Color(0xFFF3E6CE),
+        topLeft = Offset(width * .5f - width * .15f, height * .48f),
+        size = Size(width * .30f, height * .23f),
+    )
+}
+
+/** 양의 얼굴은 털과 분리된 따뜻한 베이지색 한 덩어리로 표현한다. */
+private fun DrawScope.drawSheepFacePatch(width: Float, height: Float) {
+    drawOval(
+        Color(0xFFC7A27B),
+        topLeft = Offset(width * .5f - width * .22f, height * .30f),
+        size = Size(width * .44f, height * .43f),
+    )
+}
+
 private fun DrawScope.drawStripes(width: Float, height: Float) {
     // 이전 버전은 무늬 하나하나의 세로 길이(.16)가 줄 사이 간격(.04~.07)보다 훨씬 커서
     // 서로 겹쳐 뭉쳐 보였다. 길이를 짧게 줄이고 줄 사이 간격을 넉넉히 벌려 겹치지 않게 한다.
@@ -456,6 +521,23 @@ private fun DrawScope.drawEyePatches(width: Float, height: Float) {
             )
         }
     }
+}
+
+/** 부엉이는 얼굴 원판 하나만 더해 깃털 장식 없이도 실루엣이 읽히게 한다. */
+private fun DrawScope.drawOwlFaceDisc(width: Float, height: Float) {
+    drawOval(
+        Color(0xFFF5EBDD),
+        topLeft = Offset(width * .5f - width * .25f, height * .31f),
+        size = Size(width * .50f, height * .31f),
+    )
+}
+
+/** 사슴의 이마 반점은 시안처럼 세 개만 사용해 복잡도를 억제한다. */
+private fun DrawScope.drawDeerSpots(width: Float, height: Float) {
+    val color = Color(0xFFF3E4C8).copy(alpha = .9f)
+    drawCircle(color, radius = width * .025f, center = Offset(width * .5f, height * .27f))
+    drawCircle(color, radius = width * .02f, center = Offset(width * .45f, height * .31f))
+    drawCircle(color, radius = width * .02f, center = Offset(width * .55f, height * .31f))
 }
 
 private fun DrawScope.drawWool(width: Float, height: Float) {
@@ -554,53 +636,13 @@ private fun DrawScope.drawBeak(width: Float, height: Float) {
 }
 
 private fun DrawScope.drawFace(animal: AnimalKind, width: Float, height: Float, happy: Boolean) {
-    val ink = MoodprintColors.Ink
     val eyeY = height * .44f
-    when (animal) {
-        AnimalKind.OWL -> {
-            listOf(-1f, 1f).forEach { sign ->
-                val cx = width * .5f + sign * width * .13f
-                drawCircle(Color.White, radius = width * .09f, center = Offset(cx, eyeY))
-                drawCircle(ink, radius = width * .045f, center = Offset(cx, eyeY))
-            }
-        }
-        AnimalKind.TIGER, AnimalKind.FOX -> {
-            // 얇은 실선 하나였던 이전 버전은 감은 눈처럼 보였다. 아몬드 모양을 두껍게 키우고
-            // 회전을 줄여서 뜬 눈처럼 보이게 하고, 작은 하이라이트로 생기를 더한다.
-            listOf(-1f, 1f).forEach { sign ->
-                val cx = width * .5f + sign * width * .11f
-                rotate(sign * 10f, pivot = Offset(cx, eyeY)) {
-                    drawOval(ink, topLeft = Offset(cx - width * .045f, eyeY - height * .045f), size = Size(width * .09f, height * .09f))
-                }
-                drawCircle(Color.White, radius = width * .012f, center = Offset(cx + sign * width * .015f, eyeY - height * .02f))
-            }
-        }
-        AnimalKind.KOALA -> {
-            listOf(-1f, 1f).forEach { sign ->
-                drawRoundRect(
-                    ink,
-                    topLeft = Offset(width * .5f + sign * width * .1f - width * .045f, eyeY - height * .0125f),
-                    size = Size(width * .09f, height * .025f),
-                    cornerRadius = CornerRadius(height * .012f, height * .012f),
-                )
-            }
-        }
-        AnimalKind.DEER -> {
-            listOf(-1f, 1f).forEach { sign ->
-                drawOval(ink, topLeft = Offset(width * .5f + sign * width * .11f - width * .045f, eyeY - height * .05f), size = Size(width * .09f, height * .1f))
-            }
-        }
-        AnimalKind.BEAR, AnimalKind.PANDA, AnimalKind.LION, AnimalKind.SHEEP, AnimalKind.CHICK -> {
-            listOf(-1f, 1f).forEach { sign ->
-                drawCircle(ink, radius = width * .045f, center = Offset(width * .5f + sign * width * .08f, eyeY))
-            }
-        }
-        else -> {
-            listOf(-1f, 1f).forEach { sign ->
-                drawCircle(ink, radius = width * .035f, center = Offset(width * .5f + sign * width * .1f, eyeY))
-            }
-        }
+    val eyeSpacing = when (animal) {
+        AnimalKind.OWL -> .13f
+        AnimalKind.BEAR, AnimalKind.PANDA, AnimalKind.LION -> .09f
+        else -> .105f
     }
+    drawMascotEyes(width, height, eyeY, eyeSpacing)
 
     val noseY = eyeY + height * .1f
     // 돼지는 별도 주둥이(snout)를 그리므로 기본 코는 생략하지만, 부리를 그리는 펭귄/부엉이/
@@ -618,36 +660,85 @@ private fun DrawScope.drawFace(animal: AnimalKind, width: Float, height: Float, 
     if (skipMouth) return
 
     val mouthY = noseY + height * .07f
-    if (happy) {
-        drawArc(
-            ink,
-            startAngle = 20f,
-            sweepAngle = 140f,
-            useCenter = false,
-            topLeft = Offset(width * .5f - width * .07f, mouthY - height * .045f),
-            size = Size(width * .14f, height * .09f),
-            style = Stroke(width = width * .014f),
+    drawMascotMouth(width, height, mouthY, happy)
+}
+
+/** 모든 종이 같은 가족으로 보이게 만드는 공통 '담백 초롱눈'. 흰 점은 눈마다 정확히 하나다. */
+private fun DrawScope.drawMascotEyes(
+    width: Float,
+    height: Float,
+    eyeY: Float,
+    spacing: Float,
+) {
+    listOf(-1f, 1f).forEach { sign ->
+        val cx = width * .5f + sign * width * spacing
+        drawOval(
+            mascotInk,
+            topLeft = Offset(cx - width * .032f, eyeY - height * .043f),
+            size = Size(width * .064f, height * .086f),
         )
-    } else {
-        drawLine(ink, Offset(width * .5f - width * .05f, mouthY), Offset(width * .5f + width * .05f, mouthY), strokeWidth = width * .014f)
+        drawCircle(
+            Color.White,
+            radius = width * .0115f,
+            center = Offset(cx - width * .010f, eyeY - height * .018f),
+        )
     }
 }
 
-private fun DrawScope.drawSparkle(width: Float, height: Float) {
-    val cx = width * .84f
-    val cy = height * .16f
-    val outerR = width * .07f
-    val innerR = outerR * .42f
-    val path = Path()
-    for (i in 0 until 8) {
-        val angle = Math.PI / 4 * i
-        val r = if (i % 2 == 0) outerR else innerR
-        val x = cx + (r * cos(angle)).toFloat()
-        val y = cy + (r * sin(angle)).toFloat()
-        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+/** 과장된 웃음 대신 작은 W 입을 사용하고, happy 상태에서는 폭만 살짝 넓힌다. */
+private fun DrawScope.drawMascotMouth(width: Float, height: Float, mouthY: Float, happy: Boolean) {
+    val halfWidth = width * if (happy) .065f else .052f
+    val mouthHeight = height * if (happy) .075f else .062f
+    val stroke = Stroke(width = width * .011f)
+    drawArc(
+        mascotInk,
+        startAngle = 0f,
+        sweepAngle = 180f,
+        useCenter = false,
+        topLeft = Offset(width * .5f - halfWidth, mouthY - mouthHeight * .5f),
+        size = Size(halfWidth, mouthHeight),
+        style = stroke,
+    )
+    drawArc(
+        mascotInk,
+        startAngle = 0f,
+        sweepAngle = 180f,
+        useCenter = false,
+        topLeft = Offset(width * .5f, mouthY - mouthHeight * .5f),
+        size = Size(halfWidth, mouthHeight),
+        style = stroke,
+    )
+}
+
+private fun DrawScope.drawBlush(width: Float, height: Float) {
+    listOf(-1f, 1f).forEach { sign ->
+        drawOval(
+            Color(0xFFC97F86).copy(alpha = .28f),
+            topLeft = Offset(width * .5f + sign * width * .22f - width * .045f, height * .535f),
+            size = Size(width * .09f, height * .055f),
+        )
     }
-    path.close()
-    drawPath(path, Color(0xFFF0A94E))
+}
+
+/** 시안의 핵심인 안쪽으로 모인 작은 콩알 앞발. 모든 동물에 같은 위치와 선 굵기를 쓴다. */
+private fun DrawScope.drawBeanPaws(width: Float, height: Float, bodyTint: Color, animal: AnimalKind) {
+    val pawColor = when (animal) {
+        AnimalKind.PANDA, AnimalKind.PENGUIN -> Color(0xFF514955)
+        AnimalKind.SHEEP -> Color(0xFFC7A27B)
+        else -> bodyTint.darker(.055f)
+    }
+    listOf(-1f, 1f).forEach { sign ->
+        val cx = width * .5f + sign * width * .16f
+        val topLeft = Offset(cx - width * .072f, height * .79f)
+        val pawSize = Size(width * .144f, height * .115f)
+        drawOval(pawColor, topLeft = topLeft, size = pawSize)
+        drawOval(
+            mascotInk.copy(alpha = .72f),
+            topLeft = topLeft,
+            size = pawSize,
+            style = Stroke(width = width * .009f),
+        )
+    }
 }
 
 private fun Color.darker(amount: Float): Color {

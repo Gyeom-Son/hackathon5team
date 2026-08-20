@@ -81,6 +81,9 @@ class MoodprintViewModel(
             is SyncStatus.Failed -> "동기화 확인 필요 ${status.failedCount}건"
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), if (syncEnabled) "동기화 상태 확인 중" else "서버 동기화 꺼짐 · 이 기기에 저장됨")
+    val syncRequiresReconnect: StateFlow<Boolean> = remoteSyncService.status.map { status ->
+        status is SyncStatus.Failed && status.requiresReconnect
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val logs: StateFlow<List<MoodLog>> = combine(moods, results) { moodEntries, actionResults ->
         val resultsByMood = actionResults.associateBy { it.moodId }
@@ -142,6 +145,17 @@ class MoodprintViewModel(
         viewModelScope.launch {
             _syncInProgress.value = true
             remoteSyncService.retryFailedAndPending()
+                .onFailure { _dataManagementMessage.value = syncFailureMessage(it) }
+            _syncInProgress.value = false
+        }
+    }
+
+    fun reconnectSync() {
+        if (_syncInProgress.value || _deleteInProgress.value || !syncEnabled) return
+        viewModelScope.launch {
+            _syncInProgress.value = true
+            remoteSyncService.reconnectAsNewAnonymousIdentity()
+                .onSuccess { _dataManagementMessage.value = "새 익명 서버 저장 연결을 시작했어요. 이 기기의 기록은 그대로 유지돼요." }
                 .onFailure { _dataManagementMessage.value = syncFailureMessage(it) }
             _syncInProgress.value = false
         }

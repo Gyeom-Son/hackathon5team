@@ -4,6 +4,7 @@ import com.moodprint.backend.config.CurrentUser
 import com.moodprint.backend.config.SessionRateLimiter
 import com.moodprint.backend.domain.ActionCatalog
 import com.moodprint.backend.domain.AnonymousUser
+import com.moodprint.backend.domain.PetCatalog
 import com.moodprint.backend.repository.PetRepository
 import com.moodprint.backend.service.*
 import jakarta.validation.Valid
@@ -53,7 +54,7 @@ class CompletionController(private val service: CompletionService) {
 
 @RestController @RequestMapping("/api/v1/pets")
 class PetController(private val pets: PetRepository) {
-    @GetMapping fun all(@CurrentUser user: AnonymousUser) = pets.findAllByOwnerIdOrderByPrimaryPetDescNameAsc(user.id).map { it.response() }
+    @GetMapping fun all(@CurrentUser user: AnonymousUser) = PetCatalog.sorted(pets.findAllByOwnerId(user.id)).map { it.response() }
 }
 
 @Validated @RestController @RequestMapping("/api/v1/records")
